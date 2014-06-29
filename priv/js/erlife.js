@@ -42,10 +42,16 @@
             backgroundColor: '#B5B8B4',
             liveCellColor: '#28D18D',
             emptyCellColor: '#F3F3F3',
+            mousedown: false,
+            dragging: false,
 
             init: function(canvas, context){
                 this.canvas = canvas;
                 this.context = context;
+                this.canvas.onmousedown = this.onmousedown;
+                this.canvas.onmouseup = this.onmouseup;
+                this.canvas.onmousemove = this.onmousemove;
+
                 this.draw();
             },
 
@@ -80,6 +86,23 @@
                                     this.cellSpace + (this.cellSpace * j) + (this.cellSize * j),
                                     this.cellSize,
                                     this.cellSize);
+            },
+
+            onmousedown: function(e){
+                this.mousedown = true;
+            },
+
+            onmousemove: function(e){
+                if (this.mousedown && !this.dragging){
+                    this.dragging = true;
+                }
+            },
+
+            onmouseup: function(e){
+                this.mousedown = false;
+                if (this.dragging){
+                    this.dragging = false;
+                }
             }
         },
 
