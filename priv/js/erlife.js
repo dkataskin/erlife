@@ -29,7 +29,7 @@
 
                 this.bullet.onmessage = function(e){
                     if (e.data == "pong"){
-                        console.log("pong");
+                        //console.log("pong");
                     }
                     else {
                         var event = $.parseJSON(e.data);
