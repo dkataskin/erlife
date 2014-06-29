@@ -17,7 +17,7 @@
 -record(state, { gen = 0 }).
 
 -type cellkey() :: binary().
--type point() :: {int(), int()}.
+-type point() :: {integer(), integer()}.
 -type viewport() :: {point(), point()}.
 -type cellaction() :: die | arise.
 -type celldelta() :: {cellkey(), cellaction()}.
@@ -26,7 +26,7 @@
 start_link(InitialState) ->
         gen_server:start_link(?MODULE, [InitialState], []).
 
--spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::int(), CellDelta::[celldelta()]}.
+-spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::integer(), CellDelta::[celldelta()]}.
 next_gen(Pid, Viewport) ->
         gen_server:call(Pid, {next_gen, Viewport}).
 
