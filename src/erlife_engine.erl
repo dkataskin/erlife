@@ -75,13 +75,14 @@ fill_initial(InitialState) ->
 next_gen(Viewport) ->
         TabId = ets:new(lookup_table, [set, {keypos, 1}]),
         Delta = calc_next_gen(Viewport, TabId),
-        lists:foreach(fun({Action, Key}) ->
-                        {X, Y} = to_point(Key),
-                        io:format("~p {~p,~p}~n", [Action, X, Y])
-                      end, Delta),
+
         execute_actions(Delta),
         ets:delete(TabId),
 
+        lists:foreach(fun({Key, Action, _, _}) ->
+                        {X, Y} = to_point(Key),
+                        io:format("~p {~p,~p}~n", [Action, X, Y])
+                      end, Delta),
         {ok, Delta}.
 
 calc_next_gen(Viewport, LookupTabId) ->
@@ -151,10 +152,10 @@ execute_actions(LookupTabId) ->
               end,
         ets:foldl(Fun, no_acc, LookupTabId).
 
-exec_action({Key, die}) ->
+exec_action({Key, die, _, _}) ->
         ets:delete(?node_table, Key);
 
-exec_action({Key, arise}) ->
+exec_action({Key, arise, _, _}) ->
         ets:insert(?node_table, {Key, alive}).
 
 alive_count(Cells) ->
