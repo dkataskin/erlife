@@ -1,8 +1,9 @@
 (function(){
     var erlife = window.erlife = {
+        isRunning: false,
 
         server: {
-            bullet: undefined,
+            bullet: null,
 
             init: function(address){
                 var self = this;
@@ -27,6 +28,14 @@
                 this.bullet.onheartbeat = function(){
                     self.bullet.send('ping');
                 }
+            },
+
+            run: function(userState){
+                this.bullet.send($.toJSON({ command: "start", state: userState }));
+            },
+
+            stop: function(){
+                this.bullet.send($.toJSON({ command: "stop" }));
             }
         },
 
@@ -72,6 +81,17 @@
 
                 clear: function(){
                     this.array = [];
+                },
+
+                getState: function(){
+                    var result = new Array();
+                    for(var i = 0; i < this.array.length; i++){
+                        var node = this.array[i];
+                        result.push({ x: node.x - erlife.canvas.offsetX + 1,
+                                      y: node.y - erlife.canvas.offsetY + 1 });
+                    }
+
+                    return result;
                 }
             },
 
@@ -198,6 +218,21 @@
                     minY: offsetY - (viewPortHeight / 2),
                     maxY: offsetY + (viewPortHeight / 2)
                 }
+            }
+        },
+
+        run: function(){
+            if (!this.isRunning){
+                this.server.run(this.canvas.userState.getState());
+                this.canvas.userState.clear();
+                this.isRunning = true;
+            }
+        },
+
+        stop: function(){
+            if (this.isRunning){
+                this.server.stop();
+                this.isRunning = false;
             }
         },
 
