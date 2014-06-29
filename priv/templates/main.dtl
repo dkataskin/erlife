@@ -48,4 +48,10 @@
             <span id="layoutMessages"></span>
         </form>
     </div>
+    <script>
+        $(document).ready(function(){
+            var erlife = window.erlife;
+            erlife.init('ws://localhost:8085/erlife');
+        });
+    </script>
 </div>
