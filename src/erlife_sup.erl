@@ -21,6 +21,6 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    Store = {erlife_store, {erlife_store, start_link, []}, 5000, worker, [erlife_store]},
+    Store = {erlife_store, {erlife_store, start_link, []}, permanent, 5000, worker, [erlife_store]},
     {ok, {{one_for_one, 5, 10}, [Store]}}.
 
