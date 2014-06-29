@@ -12,7 +12,7 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([next_gen/2, print/1]).
+-export([next_gen/2, next_gen/3, print/1]).
 
 -record(state, { gen = 0 }).
 
@@ -28,7 +28,10 @@ start_link(InitialState) ->
 
 -spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::integer(), CellDelta::[celldelta()]}.
 next_gen(Pid, Viewport) ->
-        gen_server:call(Pid, {next_gen, Viewport}).
+        gen_server:call(Pid, {next_gen, Viewport, []}).
+
+next_gen(Pid, Viewport, Options) ->
+        gen_server:call(Pid, {next_gen, Viewport, Options}).
 
 -spec print(Pid::pid()) -> ok.
 print(Pid) ->
@@ -48,11 +51,19 @@ handle_call(print, _From, State) ->
                   end, [], ?node_table),
         {reply, ok, State};
 
-handle_call({next_gen, {Min, Max}}, _From, State=#state{ gen = Gen }) ->
+handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
         {ok, Delta} = next_gen(Viewport1),
+
+        Resp = case proplists:lookup(invalidate, Options) of
+                 {invalidate, true} ->
+                   invalidate_viewport(Viewport1, ?node_table);
+                 none ->
+                   Delta
+               end,
+
         NewState = State#state { gen = Gen + 1 },
-        {reply, {ok, {NewState#state.gen, Delta}}, NewState};
+        {reply, {ok, {NewState#state.gen, Resp}}, NewState};
 
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.
@@ -176,6 +187,33 @@ get_neig(<<X:64, Y:64>>) ->
         SC = get_state(<<X:64, (Y+1):64>>),
         SE = get_state(<<(X + 1):64, (Y+1):64>>),
         [NW, NC, NE, CW, CE, SW, SC, SE].
+
+invalidate_viewport({{MinX, MinY}, {MaxX, MaxY}}, TabId) ->
+        invalidate_viewport(MinY, MaxY, MinX, MaxX, TabId, []).
+
+invalidate_viewport(MaxY, MaxY, X, MaxX, TabId, Acc) ->
+        Acc1 = fill_row(X, MaxX, MaxY, TabId, Acc),
+        Acc1;
+
+invalidate_viewport(Y, MaxY, X, MaxX, TabId, Acc) ->
+        Acc1 = fill_row(X, MaxX, Y, TabId, Acc),
+        invalidate_viewport(Y + 1, MaxY, X, MaxX, TabId, Acc1).
+
+fill_row(MaxX, MaxX, Y, TabId, Acc) ->
+        fill_by_key(MaxX, Y, TabId, Acc),
+        Acc;
+
+fill_row(X, MaxX, Y, TabId, Acc) ->
+        Acc1 = fill_by_key(X, Y, TabId, Acc),
+        fill_row(X + 1, MaxX, Y, TabId, Acc1).
+
+fill_by_key(X, Y, TabId, Acc) ->
+        case ets:lookup(TabId, <<X:64, Y:64>>) of
+          [] ->
+            Acc;
+          [_] ->
+            [{translate(to_client, X), translate(to_client, Y), arise} | Acc]
+        end.
 
 get_state(Key) ->
         case ets:lookup(?node_table, Key) of
