@@ -3,10 +3,13 @@
         isRunning: false,
         isInitialized: false,
 
+        onUpdate: function(genNum, nodeCount){
+        },
+
         server: {
             bullet: null,
 
-            init: function(address){
+            init: function(address, sessionId){
                 var self = this;
                 this.bullet = $.bullet(address);
 
@@ -23,11 +26,17 @@
                 };
 
                 this.bullet.onmessage = function(e){
-                    console.log(e.data);
+                    var event = $.parseJSON(e.data);
+                    if (event){
+                        if (event.event == "nextGen"){
+                            var data = event.data;
+                            erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
+                        }
+                    }
                 };
 
                 this.bullet.onheartbeat = function(){
-                    self.bullet.send('ping');
+                    self.bullet.send('ping ' + sessionId);
                 }
             },
 
@@ -47,6 +56,13 @@
 
             stop: function(){
                 this.bullet.send($.toJSON({ command: "stop" }));
+            }
+        },
+
+        eventHandlers: {
+            onNextGen: function(genNum, nodeCount, delta){
+                erlife.canvas.drawDelta(delta);
+                erlife.onUpdate(genNum, nodeCount);
             }
         },
 
@@ -133,6 +149,24 @@
                   for (j = 0; j < this.rows; j++) {
                     this.drawCell(i, j, false);
                   }
+                }
+            },
+
+            drawDelta: function(delta){
+                var self = this;
+                delta.forEach(function(array) {
+                    var x = array[1] + self.offsetX - 1;
+                    var y = array[2] + self.offsetY - 1;
+                    self.drawCell(x, y, array[0]);
+                });
+
+                for(i = 0; i++; i < delta.length){
+                    console.log("i " + i);
+                    // [false | true, X, Y]
+                    var x = delta[i][1] + this.canvas.offsetX - 1;
+                    var y = delta[i][2] + this.canvas.offsetY - 1;
+                    console.log("x " + x + " y " + y);
+                    this.drawCell(x, y, delta[i][0]);
                 }
             },
 
@@ -283,7 +317,7 @@
 
         init: function(config){
             this.canvas.init(config.canvas, config.context);
-            this.server.init(config.address);
+            this.server.init(config.address, config.sessionId);
         }
     };
 })()

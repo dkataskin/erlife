@@ -2,16 +2,22 @@
 -author("Dmitry Kataskin").
 
 %% API
--export([parse_initial_input/1, prepare_delta/1, gen_delta_to_json/2]).
+-export([parse_initial_input/1, gen_delta_to_json/2]).
 
 parse_initial_input(Nodes) ->
-        array_to_initialstate(Nodes, []).
+        array_to_state(Nodes, []).
 
-array_to_initialstate([], Acc) ->
+array_to_state([], Acc) ->
         Acc;
 
-array_to_initialstate([X, Y | T], Acc) ->
-        array_to_initialstate(T, [{X, Y} | Acc]).
+array_to_state([X, Y | T], Acc) ->
+        array_to_state(T, [{X, Y} | Acc]).
+
+gen_delta_to_json(GenNum, Delta) ->
+        jsx:encode([{<<"event">>, <<"nextGen">>},
+                    {<<"data">>, [{<<"num">>, GenNum},
+                                  {<<"nodeCount">>, 0},
+                                  {<<"delta">>, prepare_delta(Delta)}]}]).
 
 prepare_delta(Delta) ->
         Fun = fun({X, Y, Action}) ->
@@ -23,6 +29,3 @@ prepare_delta(Delta) ->
                 end
               end,
         lists:map(Fun, Delta).
-
-gen_delta_to_json(GenNum, Delta) ->
-        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, erlife_protocol:prepare_delta(Delta)}]).

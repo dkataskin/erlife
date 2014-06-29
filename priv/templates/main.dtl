@@ -52,9 +52,13 @@
         $(document).ready(function(){
             var canvas = document.getElementById('grid');
             var context = canvas.getContext('2d');
+            var sessionId = document.cookie.replace(/(?:(?:^|.*;\s*) erlife_session_id\s*\=\s*([^;]*).*$)|^.*$/, "$1");
 
             var erlife = window.erlife;
-            erlife.init({ address: 'ws://localhost:8085/erlife', canvas: canvas, context: context });
+            erlife.onUpdate = function(genNum, nodeCount){
+                $("#generation").text(genNum);
+                $("#livecells").text(nodeCount);
+            };
 
             $("#buttonRun").click(function(){
                 if (erlife.isRunning){
@@ -75,6 +79,12 @@
             $("#buttonClear").click(function(){
                 erlife.stop();
             });
+
+            erlife.init({ address: 'ws://localhost:8085/erlife',
+                          canvas: canvas,
+                          context: context,
+                          sessionId: sessionId
+                        });
         });
     </script>
 </div>
