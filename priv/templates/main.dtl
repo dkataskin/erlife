@@ -42,7 +42,7 @@
         <div class="subtitle">Load</div>
         <form>
             <select id="selectSavedStates" width="150" />
-            <input type="text" value="" width="150" />
+            <input id="textLoadedStateName" type="text" value="" width="150" disabled />
             <input type="button" id="buttonLoad" value="Load"/>
             <input type="button" id="buttonOverwrite" value="Overwrite" />
             <span id="layoutMessages"></span>
@@ -102,9 +102,13 @@
                 if (!name){
                     alert("Would be good to assign some name.");
                 }
-                else{
-                    erlife.loadState
+                else {
+                    erlife.saveState(name);
                 }
+            });
+
+            $("#buttonLoad").click(function(){
+                //erlife.saveState(name);
             });
 
             erlife.init({ address: 'ws://localhost:8085/erlife',

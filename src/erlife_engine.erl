@@ -13,7 +13,7 @@
 
 -export([next_gen/3, next_gen/4]).
 -export([dump_state/1, restore_from_dump/2]).
--export([clear/1, get_viewport/2]).
+-export([apply_changes/2, clear/1, get_viewport/2]).
 -export([print/1]).
 
 -record(state, { gen = 0, tab_id = undefined }).
@@ -39,6 +39,9 @@ next_gen(Pid, Viewport, ChangesToState) ->
 
 next_gen(Pid, Viewport, ChangesToState, Options) ->
         gen_server:call(Pid, {next_gen, Viewport, ChangesToState, Options}).
+
+apply_changes(Pid, ChangesToState) ->
+        gen_server:call(Pid, {apply_changes, ChangesToState}).
 
 clear(Pid) ->
         gen_server:call(Pid, clear).
@@ -72,17 +75,8 @@ handle_call(print, _From, State=#state { tab_id = TabId }) ->
 
 handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        Fun = fun({X, Y, Alive}) ->
-                {X1, Y1} = translate(to_server, {X, Y}),
-                case Alive of
-                  true ->
-                    {<<X1:64, Y1:64>>, arise};
-                  false ->
-                    {<<X1:64, Y1:64>>, die}
-                end
-              end,
-        ChangesToState1 = lists:map(Fun, ChangesToState),
-        ok = apply_changes_to_state(ChangesToState1, TabId),
+        Actions = changes_to_action_list(ChangesToState),
+        ok = apply_changes_to_state(Actions, TabId),
         {ok, Delta} = calc_next_gen(Viewport1, TabId),
 
         Resp = case proplists:lookup(invalidate, Options) of
@@ -94,6 +88,11 @@ handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state
 
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Resp}}, NewState};
+
+handle_call({apply_changes, ChangesToState}, _From, State=#state { tab_id = TabId }) ->
+        Actions = changes_to_action_list(ChangesToState),
+        ok = apply_changes_to_state(Actions, TabId),
+        {reply, {ok, applied}, State};
 
 handle_call({get_viewport, {Min, Max}}, _From, State=#state { tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
@@ -195,9 +194,21 @@ add_to_viewport({<<X:64, Y:64>>, State}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportD
 add_to_viewport(_, _, ViewportDelta) ->
         ViewportDelta.
 
-apply_changes_to_state(Changes, WorldTabId) ->
+changes_to_action_list(ChangesToState) ->
+        Fun = fun({X, Y, Alive}) ->
+          {X1, Y1} = translate(to_server, {X, Y}),
+          case Alive of
+            true ->
+              {<<X1:64, Y1:64>>, arise};
+            false ->
+              {<<X1:64, Y1:64>>, die}
+          end
+        end,
+        lists:map(Fun, ChangesToState).
+
+apply_changes_to_state(Actions, WorldTabId) ->
         Fun = fun({Key, Action}) -> exec_action({Key, Action}, WorldTabId) end,
-        lists:foreach(Fun, Changes),
+        lists:foreach(Fun, Actions),
         ok.
 
 apply_changes_to_state(WorldTabId, LookupTabId, Viewport) ->

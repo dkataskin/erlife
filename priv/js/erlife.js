@@ -53,8 +53,7 @@
 
             nextGen: function(viewport, changes, invalidate){
                 this.bullet.send($.toJSON({ command: "nextGen",
-                                            data: {
-                                                    viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY],
+                                            data: { viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY],
                                                     statechanges: changes,
                                                     invalidate: invalidate
                                                   }
@@ -65,9 +64,11 @@
                 this.bullet.send($.toJSON({ command: "clear" }));
             },
 
-            saveState: function(name){
+            saveState: function(name, changes){
                 this.bullet.send($.toJSON({ command: "save",
-                                            data: { name: name }}));
+                                            data: { name: name,
+                                                    statechanges: changes,
+                                            }}));
             },
 
             loadState: function(id){
@@ -336,6 +337,9 @@
         },
 
         saveState: function(name){
+            var changesToState = this.canvas.userState.getState();
+            this.canvas.userState.clear();
+            this.server.saveState(name, changesToState);
         },
 
         loadState: function(id){
