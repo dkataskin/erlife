@@ -34,6 +34,10 @@
                 this.bullet.send($.toJSON({ command: "start", state: userState }));
             },
 
+            nextGen: function(){
+                this.bullet.send($.toJSON({ command: "nextGen" }));
+            },
+
             stop: function(){
                 this.bullet.send($.toJSON({ command: "stop" }));
             }
@@ -227,6 +231,10 @@
                 this.canvas.userState.clear();
                 this.isRunning = true;
             }
+        },
+
+        nextGen: function(){
+            this.server.nextGen();
         },
 
         stop: function(){

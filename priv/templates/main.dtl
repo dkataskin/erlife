@@ -65,6 +65,12 @@
                     $("#buttonRun").attr('value', 'Stop');
                 }
             });
+
+            $("#buttonStep").click(function(){
+                if (erlife.isRunning){
+                    erlife.nextGen();
+                };
+            });
         });
     </script>
 </div>

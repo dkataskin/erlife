@@ -19,7 +19,7 @@ stream(<<"ping: ", Name/binary>>, Req, State) ->
 stream(Data, Req, State) ->
         case jsx:is_json(Data) of
           true ->
-            io:format("stream received valid json ~s~n", [Data]),
+            %io:format("stream received valid json ~s~n", [Data]),
             Json = jsx:decode(Data),
             {ok, Req1, State1} = execute_command(Json, Req, State),
             {ok, Req1, State1};
@@ -39,8 +39,16 @@ terminate(_Req, _State) ->
 execute_command([{<<"command">>, Command} | T], Req, State) ->
         execute_command(Command, T, Req, State).
 
+execute_command(<<"nextGen">>, _, Req, State) ->
+        io:format("user commanded: nextGen~n"),
+        {ok, Req, State};
+
 execute_command(<<"start">>, Data, Req, State) ->
-        io:format("start received data:~p~n", [Data]),
+        io:format("user commanded: start; data:~p~n", [Data]),
+        {ok, Req, State};
+
+execute_command(<<"stop">>, _, Req, State) ->
+        io:format("user commanded: stop~n"),
         {ok, Req, State};
 
 execute_command(Command, _, Req, State) ->
