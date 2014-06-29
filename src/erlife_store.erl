@@ -21,10 +21,10 @@ save(Name, TabId) ->
         gen_server:call(?erlife_store, {save, {Name, TabId}}).
 
 update(Id, Name, TabId) ->
-        gen_server:call(?erlife_store, {update, Id, Name, TabId}).
+        gen_server:call(?erlife_store, {update, {Id, Name, TabId}}).
 
 load(Id, Pid) ->
-        gen_server:call(?erlife_store, {load, Id, Pid}).
+        gen_server:call(?erlife_store, {load, {Id, Pid}}).
 
 list() ->
         gen_server:call(?erlife_store, list).
@@ -35,21 +35,21 @@ init([]) ->
         {ok, _} = dets:open_file(?dumps_table, [{file, FileName}]),
         {ok, no_state}.
 
-handle_call({save, Name, TabId}, _From, State) ->
+handle_call({save, {Name, TabId}}, _From, State) ->
         Id = erlife_utils:generate_uuid(),
         ets:tab2file(TabId, get_filename(Id)),
         dets:insert(?dumps_table, {Id, Name}),
-        {reply, ok, State};
+        {reply, {saved, Id}, State};
 
-handle_call({update, Id, Name, TabId}, _From, State) ->
+handle_call({update, {Id, Name, TabId}}, _From, State) ->
         ets:tab2file(TabId, get_filename(Id)),
         dets:insert(?dumps_table, {Id, Name}),
-        {reply, ok, State};
+        {reply, {updated, Id}, State};
 
-handle_call({load, Id, Pid}, _From, State) ->
+handle_call({load, {Id, Pid}}, _From, State) ->
         {ok, TabId} = ets:file2tab(get_filename(Id)),
         true = ets:give_away(TabId, Pid, enjoy),
-        {reply, {ok, TabId}, State};
+        {reply, {loaded, TabId}, State};
 
 handle_call(list, _From, State) ->
         List = dets:foldl(fun(Elem, Acc) -> [Elem | Acc] end, [], ?dumps_table),
