@@ -32,4 +32,4 @@ static_files(FileType) ->
           {dir, static_content_dir(FileType), [{mimetypes, cow_mimetypes, web}]}}.
 
 static_content_dir(FileType) ->
-        erlife_utils:priv_dir() ++ "/" ++ FileType.
+        filename:join(erlife_utils:priv_dir(), FileType).

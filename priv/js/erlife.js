@@ -34,7 +34,9 @@
                         if (event){
                             if (event.event == "nextGen"){
                                 var data = event.data;
-                                erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
+                                if (erlife.isRunning){
+                                    erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
+                                }
                             }
                         }
                     }
@@ -69,7 +71,10 @@
                 erlife.canvas.drawDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
 
-                setTimeout(function() { erlife.update(); }, 100);
+                setTimeout(function() {
+                    if (erlife.isRunning){
+                        erlife.update();
+                    }}, 100);
             }
         },
 

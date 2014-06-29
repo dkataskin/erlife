@@ -1,20 +1,18 @@
-%%%-------------------------------------------------------------------
-%%% @author kotoff
-%%% @copyright (C) 2014, <COMPANY>
-%%% @doc
-%%%
-%%% @end
-%%% Created : 28. Jun 2014 19:27
-%%%-------------------------------------------------------------------
 -module(erlife_utils).
--author("kotoff").
+-author("Dmitry Kataskin").
 
 %% API
--export([priv_dir/0, generate_uuid/0]).
+-export([priv_dir/0, dumps_dir/0, generate_uuid/0]).
 
 priv_dir() ->
+        filename:join(ebin_dir(), "priv").
+
+dumps_dir() ->
+        filename:join(priv_dir(), "dumps").
+
+ebin_dir() ->
         Ebin = filename:dirname(code:which(erlife)),
-        filename:join(filename:dirname(Ebin), "priv").
+        filename:dirname(Ebin).
 
 generate_uuid() ->
         Now = {_, _, Micro} = now(),
