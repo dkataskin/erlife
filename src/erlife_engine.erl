@@ -48,8 +48,9 @@ handle_call(print, _From, State) ->
                   end, [], ?node_table),
         {reply, ok, State};
 
-handle_call({next_gen, Viewport}, _From, State=#state{ gen = Gen }) ->
-        {ok, Delta} = next_gen(Viewport),
+handle_call({next_gen, {Min, Max}}, _From, State=#state{ gen = Gen }) ->
+        Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
+        {ok, Delta} = next_gen(Viewport1),
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Delta}}, NewState};
 
@@ -79,8 +80,7 @@ next_gen(Viewport) ->
         ViewportDelta = execute_actions(TabId, Viewport),
         ets:delete(TabId),
 
-        lists:foreach(fun({Key, Action, _, _}) ->
-                        {X, Y} = to_point(Key),
+        lists:foreach(fun({X, Y, Action}) ->
                         io:format("~p {~p,~p}~n", [Action, X, Y])
                       end, ViewportDelta),
         {ok, ViewportDelta}.
@@ -137,7 +137,8 @@ decide_on_cell({_, alive}, _, _) ->
 
 add_to_viewport({_, State, X, Y}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportDelta)
     when X >= MinX andalso X =< MaxX andalso Y >= MinY andalso Y =< MaxY ->
-        [{X, Y, State} | ViewportDelta];
+        {X1, Y1} = translate(to_client, {X, Y}),
+        [{X1, Y1, State} | ViewportDelta];
 
 add_to_viewport(_, _, ViewportDelta) ->
         ViewportDelta.
@@ -183,6 +184,12 @@ get_state(Key) ->
           [_] ->
             {Key, alive}
         end.
+
+translate(to_server, {X, Y}) ->
+        {X + ?center, Y + ?center};
+
+translate(to_client, {X, Y}) ->
+        {X - ?center, Y - ?center}.
 
 to_point(<<X:64, Y:64>>) ->
         {X - ?center, Y - ?center}.
