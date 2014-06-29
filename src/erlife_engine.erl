@@ -37,6 +37,9 @@ next_gen(Pid, Viewport) ->
 next_gen(Pid, Viewport, Options) ->
         gen_server:call(Pid, {next_gen, Viewport, Options}).
 
+get_viewport(Pid, Viewport) ->
+        gen_server:call(Pid, {get_viewport, Viewport}).
+
 dump_state(Pid) ->
         gen_server:call(Pid, dump_state).
 
@@ -76,10 +79,15 @@ handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen, tab
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Resp}}, NewState};
 
+handle_call({get_viewport, {Min, Max}}, _From, State=#state { tab_id = TabId }) ->
+        Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
+        ViewportData = invalidate_viewport(Viewport1, TabId),
+        {reply, {ok, ViewportData}, State};
+
 handle_call(dump_state, _From, State=#state { tab_id = TabId }) ->
         {reply, {dumped, TabId}, State};
 
-handle_call({restore_from_dump, DumpTabId}, _From, State=#state { tab_id = TabId }) ->
+handle_call({restore_from_dump, DumpTabId}, _From, #state { tab_id = TabId }) ->
         true = ets:delete(TabId),
         NewState = #state { gen = 0, tab_id = DumpTabId },
         {reply, {ok, restored}, NewState};
