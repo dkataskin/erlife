@@ -1,6 +1,7 @@
 (function(){
     var erlife = window.erlife = {
         isRunning: false,
+        isInitialized: false,
 
         server: {
             bullet: null,
@@ -30,7 +31,7 @@
                 }
             },
 
-            run: function(userState){
+            start: function(userState){
                 this.bullet.send($.toJSON({ command: "start", state: userState }));
             },
 
@@ -227,21 +228,49 @@
 
         run: function(){
             if (!this.isRunning){
-                this.server.run(this.canvas.userState.getState());
-                this.canvas.userState.clear();
+                if (!this.isInitialized){
+                    this.start();
+                };
+
+                //this.server.run(this.canvas.userState.getState());
                 this.isRunning = true;
             }
         },
 
+        pause: function(){
+            if (this.isRunning){
+                this.isRunning = false;
+            }
+        },
+
         nextGen: function(){
-            this.server.nextGen();
+            if (!this.isRunning){
+                if (!this.isInitialized){
+                    this.start();
+                }
+
+                this.server.nextGen();
+            }
+        },
+
+        start: function(){
+            if (!this.isInitialized){
+                this.server.start(this.canvas.userState.getState());
+                this.canvas.userState.clear();
+
+                this.isInitialized = true;
+            }
         },
 
         stop: function(){
-            if (this.isRunning){
+            if (this.isInitialized){
                 this.server.stop();
-                this.isRunning = false;
+                this.canvas.draw();
+
+                this.isInitialized = false;
             }
+
+            this.isRunning = false;
         },
 
         init: function(config){

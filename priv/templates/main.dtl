@@ -58,18 +58,22 @@
 
             $("#buttonRun").click(function(){
                 if (erlife.isRunning){
-                    erlife.stop();
+                    erlife.pause();
                     $("#buttonRun").attr('value', 'Run');
                 } else {
                     erlife.run();
-                    $("#buttonRun").attr('value', 'Stop');
+                    $("#buttonRun").attr('value', 'Pause');
                 }
             });
 
             $("#buttonStep").click(function(){
-                if (erlife.isRunning){
+                if (!erlife.isRunning){
                     erlife.nextGen();
                 };
+            });
+
+            $("#buttonClear").click(function(){
+                erlife.stop();
             });
         });
     </script>
