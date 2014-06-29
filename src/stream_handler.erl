@@ -47,8 +47,8 @@ execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ s
         io:format("user commanded: nextGen, data:~p~n", [Data]),
         {ok, Viewport, Options} = get_nextgen_input(Data),
         Fun = fun(Pid) ->
-                {ok, GenNum, Delta} = erlife_engine:next_gen(Pid, Viewport, Options),
-                get_delta_json(GenNum, Delta)
+                {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, Options),
+                erlife_protocol:gen_delta_to_json(GenNum, Delta)
               end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
@@ -67,9 +67,6 @@ execute_command(<<"stop">>, _, Req, State=#stream_state{ sessionId = SessionId }
 execute_command(Command, _, Req, State) ->
         io:format("unknown command ~p received ~n", [Command]),
         {ok, Req, State}.
-
-get_delta_json(GenNum, Delta) ->
-        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, erlang_protocol:prepare_delta(Delta)}]).
 
 get_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]}, {<<"invalidate">>, Invalidate}]) ->
         Viewport = {{MinX, MinY}, {MaxX, MaxY}},

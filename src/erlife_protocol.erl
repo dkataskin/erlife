@@ -2,7 +2,7 @@
 -author("Dmitry Kataskin").
 
 %% API
--export([parse_initial_input/1, prepare_delta/1]).
+-export([parse_initial_input/1, prepare_delta/1, gen_delta_to_json/2]).
 
 parse_initial_input(Nodes) ->
         array_to_initialstate(Nodes, []).
@@ -23,3 +23,6 @@ prepare_delta(Delta) ->
                 end
               end,
         lists:map(Fun, Delta).
+
+gen_delta_to_json(GenNum, Delta) ->
+        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, erlife_protocol:prepare_delta(Delta)}]).
