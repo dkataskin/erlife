@@ -1,5 +1,4 @@
 -module(stream_handler).
-
 -author("Dmitry Kataskin").
 
 -include("erlife.hrl").
@@ -23,7 +22,6 @@ stream(<<"ping: ", Name/binary>>, Req, State) ->
 stream(Data, Req, State) ->
         case jsx:is_json(Data) of
           true ->
-            %io:format("stream received valid json ~s~n", [Data]),
             execute_command(jsx:decode(Data), Req, State);
 
           false ->
@@ -44,7 +42,7 @@ execute_command([{<<"command">>, Command} | T], Req, State) ->
         execute_command(Command, T, Req, State).
 
 execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-        io:format("user commanded: nextGen, data:~p~n", [Data]),
+        %io:format("user commanded: nextGen, data:~p~n", [Data]),
         {ok, Viewport, Options} = get_nextgen_input(Data),
         Fun = fun(Pid) ->
                 {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, Options),
@@ -95,15 +93,15 @@ reply(Response, Req, State) ->
         {reply, Response, Req, State}.
 
 start_engine(SessionId, InitialState) ->
-        EnginePid = case gproc:lookup_local_name(SessionId) of
-                      undefined ->
-                        {ok, Pid1} = erlife_engine:start_link(SessionId, InitialState),
-                        Pid1;
+        ok = case gproc:lookup_local_name(SessionId) of
+              undefined ->
+                ok;
 
-                      ProcessPid ->
-                        ProcessPid
-                    end,
-        {ok, EnginePid}.
+              ProcessPid ->
+                erlife_engine:stop(ProcessPid),
+                ok
+             end,
+        erlife_engine:start_link(SessionId, InitialState).
 
 stop_engine(SessionId) ->
         case gproc:lookup_local_name(SessionId) of

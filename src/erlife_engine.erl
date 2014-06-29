@@ -3,7 +3,6 @@
 
 -behaviour(gen_server).
 
--define(node_table, erlife_nodes).
 -define(center, trunc(math:pow(2, 64) / 2)).
 
 %% API
@@ -14,7 +13,7 @@
 
 -export([next_gen/2, next_gen/3, print/1]).
 
--record(state, { gen = 0 }).
+-record(state, { gen = 0, tab_id = undefined }).
 
 -type cellkey() :: binary().
 -type point() :: {integer(), integer()}.
@@ -43,25 +42,25 @@ print(Pid) ->
 % gen_server callbacks
 -spec init(InitialState::[point()]) -> {ok, pid()}.
 init([Id, InitialState]) ->
-        ets:new(?node_table, [set, {keypos, 1}, {read_concurrency, true}, named_table]),
-        fill_initial(InitialState),
+        TabId = ets:new(node_table, [set, {keypos, 1}, {read_concurrency, true}]),
+        fill_initial(InitialState, TabId),
         gproc:add_local_name(Id),
-        {ok, #state{ gen = 0 }}.
+        {ok, #state{ gen = 0, tab_id = TabId }}.
 
-handle_call(print, _From, State) ->
+handle_call(print, _From, State=#state { tab_id = TabId }) ->
         ets:foldl(fun({Key, _}, []) ->
                       {X, Y} = to_point(Key),
                       io:format("X:~p Y:~p~n", [X, Y]), []
-                  end, [], ?node_table),
+                  end, [], TabId),
         {reply, ok, State};
 
-handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen }) ->
+handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        {ok, Delta} = next_gen(Viewport1),
+        {ok, Delta} = calc_next_gen(Viewport1, TabId),
 
         Resp = case proplists:lookup(invalidate, Options) of
                  {invalidate, true} ->
-                   invalidate_viewport(Viewport1, ?node_table);
+                   invalidate_viewport(Viewport1, TabId);
                  none ->
                    Delta
                end,
@@ -87,32 +86,32 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
         {ok, State}.
 
-fill_initial(InitialState) ->
-        lists:foreach(fun({X, Y}) -> ets:insert(?node_table, {to_key(X, Y), alive}) end, InitialState),
+fill_initial(InitialState, TabId) ->
+        lists:foreach(fun({X, Y}) -> ets:insert(TabId, {to_key(X, Y), alive}) end, InitialState),
         ok.
 
-next_gen(Viewport) ->
-        TabId = ets:new(lookup_table, [set, {keypos, 1}]),
-        ok = calc_next_gen(TabId),
+calc_next_gen(Viewport, WorldTabId) ->
+        LookupTabId = ets:new(lookup_table, [set, {keypos, 1}]),
+        ok = traverse_cells(WorldTabId, LookupTabId),
 
-        ViewportDelta = execute_actions(TabId, Viewport),
-        ets:delete(TabId),
+        ViewportDelta = execute_actions(WorldTabId, LookupTabId, Viewport),
+        ets:delete(LookupTabId),
 
-        lists:foreach(fun({X, Y, Action}) ->
-                        io:format("~p {~p,~p}~n", [Action, X, Y])
-                      end, ViewportDelta),
+        %lists:foreach(fun({X, Y, Action}) ->
+        %                io:format("~p {~p,~p}~n", [Action, X, Y])
+        %              end, ViewportDelta),
         {ok, ViewportDelta}.
 
-calc_next_gen(LookupTabId) ->
+traverse_cells(WorldTabId, LookupTabId) ->
         Fun = fun(Cell, Acc) ->
-                traverse_cell(Cell, LookupTabId),
+                traverse_cell(Cell, WorldTabId, LookupTabId),
                 Acc
               end,
-        ets:foldl(Fun, [], ?node_table),
+        ets:foldl(Fun, [], WorldTabId),
         ok.
 
-traverse_cell(Cell={Key, alive}, LookupTabId) ->
-        Neig = get_neig(Key),
+traverse_cell(Cell={Key, alive}, WorldTabId, LookupTabId) ->
+        Neig = get_neig(Key, WorldTabId),
         Count = alive_count(Neig),
         ok = decide_on_cell(Cell, Count, LookupTabId),
 
@@ -123,7 +122,7 @@ traverse_cell(Cell={Key, alive}, LookupTabId) ->
 
                   empty ->
                     case ets:lookup(LookupTabId, CellKey) of
-                      [] -> traverse_cell(CellElem, LookupTabId);
+                      [] -> traverse_cell(CellElem, WorldTabId, LookupTabId);
                       [_] -> ok
                     end
                 end
@@ -131,8 +130,8 @@ traverse_cell(Cell={Key, alive}, LookupTabId) ->
 
         lists:foreach(Fun, Neig);
 
-traverse_cell(Cell={Key, empty}, LookupTabId) ->
-        Neig = get_neig(Key),
+traverse_cell(Cell={Key, empty}, WorldTabId, LookupTabId) ->
+        Neig = get_neig(Key, WorldTabId),
         Count = alive_count(Neig),
         ok = decide_on_cell(Cell, Count, LookupTabId),
         ok.
@@ -161,19 +160,19 @@ add_to_viewport({_, State, X, Y}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportDelta)
 add_to_viewport(_, _, ViewportDelta) ->
         ViewportDelta.
 
-execute_actions(LookupTabId, Viewport) ->
+execute_actions(WorldTabId, LookupTabId, Viewport) ->
         Fun = fun(Action, ViewportDelta) ->
-                ok = exec_action(Action),
+                ok = exec_action(Action, WorldTabId),
                 add_to_viewport(Action, Viewport, ViewportDelta)
               end,
         ets:foldl(Fun, [], LookupTabId).
 
-exec_action({Key, die, _, _}) ->
-        ets:delete(?node_table, Key),
+exec_action({Key, die, _, _}, TabId) ->
+        ets:delete(TabId, Key),
         ok;
 
-exec_action({Key, arise, _, _}) ->
-        ets:insert(?node_table, {Key, alive}),
+exec_action({Key, arise, _, _}, TabId) ->
+        ets:insert(TabId, {Key, alive}),
         ok.
 
 alive_count(Cells) ->
@@ -182,17 +181,17 @@ alive_count(Cells) ->
               end,
         lists:foldl(Fun, 0, Cells).
 
-get_neig(<<X:64, Y:64>>) ->
-        NW = get_state(<<(X-1):64, (Y-1):64>>),
-        NC = get_state(<<X:64, (Y-1):64>>),
-        NE = get_state(<<(X + 1):64, (Y-1):64>>),
+get_neig(<<X:64, Y:64>>, TabId) ->
+        NW = get_state(<<(X-1):64, (Y-1):64>>, TabId),
+        NC = get_state(<<X:64, (Y-1):64>>, TabId),
+        NE = get_state(<<(X + 1):64, (Y-1):64>>, TabId),
 
-        CW = get_state(<<(X-1):64, Y:64>>),
-        CE = get_state(<<(X+1):64, Y:64>>),
+        CW = get_state(<<(X-1):64, Y:64>>, TabId),
+        CE = get_state(<<(X+1):64, Y:64>>, TabId),
 
-        SW = get_state(<<(X-1):64, (Y+1):64>>),
-        SC = get_state(<<X:64, (Y+1):64>>),
-        SE = get_state(<<(X + 1):64, (Y+1):64>>),
+        SW = get_state(<<(X-1):64, (Y+1):64>>, TabId),
+        SC = get_state(<<X:64, (Y+1):64>>, TabId),
+        SE = get_state(<<(X + 1):64, (Y+1):64>>, TabId),
         [NW, NC, NE, CW, CE, SW, SC, SE].
 
 invalidate_viewport({{MinX, MinY}, {MaxX, MaxY}}, TabId) ->
@@ -222,8 +221,8 @@ fill_by_key(X, Y, TabId, Acc) ->
             [{translate(to_client, X), translate(to_client, Y), arise} | Acc]
         end.
 
-get_state(Key) ->
-        case ets:lookup(?node_table, Key) of
+get_state(Key, TabId) ->
+        case ets:lookup(TabId, Key) of
           [] ->
             {Key, empty};
           [_] ->

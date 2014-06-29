@@ -26,17 +26,22 @@
                 };
 
                 this.bullet.onmessage = function(e){
-                    var event = $.parseJSON(e.data);
-                    if (event){
-                        if (event.event == "nextGen"){
-                            var data = event.data;
-                            erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
+                    if (e.data == "pong"){
+                        console.log("pong");
+                    }
+                    else {
+                        var event = $.parseJSON(e.data);
+                        if (event){
+                            if (event.event == "nextGen"){
+                                var data = event.data;
+                                erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
+                            }
                         }
                     }
                 };
 
                 this.bullet.onheartbeat = function(){
-                    self.bullet.send('ping ' + sessionId);
+                    self.bullet.send('ping: ' + sessionId);
                 }
             },
 
@@ -63,6 +68,8 @@
             onNextGen: function(genNum, nodeCount, delta){
                 erlife.canvas.drawDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
+
+                setTimeout(function() { erlife.update(); }, 100);
             }
         },
 
@@ -273,8 +280,8 @@
                     this.start();
                 };
 
-                //this.server.run(this.canvas.userState.getState());
                 this.isRunning = true;
+                this.update();
             }
         },
 
@@ -288,10 +295,9 @@
             if (!this.isRunning){
                 if (!this.isInitialized){
                     this.start();
-                }
+                };
 
-                var viewport = this.viewport.getView();
-                this.server.nextGen(viewport, this.viewport.invalidate);
+                this.update();
             }
         },
 
@@ -313,6 +319,13 @@
             }
 
             this.isRunning = false;
+        },
+
+        update: function(){
+            if (this.isRunning){
+                var viewport = this.viewport.getView();
+                this.server.nextGen(viewport, this.viewport.invalidate);
+            }
         },
 
         init: function(config){
