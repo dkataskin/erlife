@@ -19,7 +19,8 @@
         <a href=".">Conway's Game of Life</a>
     </div>
 
-    <canvas id="canvas" width="901" height="433"></canvas>
+    <canvas id="grid" width="900" height="433"></canvas>
+
     <div class="cl">&nbsp;</div>
     <div class="box">
         <div class="subtitle">Running Information</div>
@@ -50,8 +51,11 @@
     </div>
     <script>
         $(document).ready(function(){
+            var canvas = document.getElementById('grid');
+            var context = canvas.getContext('2d');
+
             var erlife = window.erlife;
-            erlife.init('ws://localhost:8085/erlife');
+            erlife.init({ address: 'ws://localhost:8085/erlife', canvas: canvas, context: context });
         });
     </script>
 </div>

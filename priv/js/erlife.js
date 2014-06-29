@@ -1,31 +1,91 @@
 (function(){
     var erlife = window.erlife = {
 
-        onUpdate: function(){
-        },
+        server: {
+            bullet: undefined,
 
-        init: function(address){
-                var bullet = $.bullet(address);
+            init: function(address){
+                var self = this;
+                this.bullet = $.bullet(address);
 
-                bullet.onopen = function(){
+                this.bullet.onopen = function(){
                     console.log('bullet: opened');
                 };
 
-                bullet.ondisconnect = function(){
+                this.bullet.ondisconnect = function(){
                     console.log('bullet: disconnected');
                 };
 
-                bullet.onclose = function(){
+                this.bullet.onclose = function(){
                     console.log('bullet: closed');
                 };
 
-                bullet.onmessage = function(e){
+                this.bullet.onmessage = function(e){
                     //alert(e.data);
                 };
 
-                bullet.onheartbeat = function(){
-                    bullet.send('ping');
+                this.bullet.onheartbeat = function(){
+                    self.bullet.send('ping');
                 }
             }
+        },
+
+        canvas: {
+            context: null,
+            canvas: null,
+            width: 900,
+            height: 500,
+            cols: 100,
+            rows: 100,
+            cellSize: 8,
+            cellSpace: 1,
+            backgroundColor: '#B5B8B4',
+            liveCellColor: '#28D18D',
+            emptyCellColor: '#F3F3F3',
+
+            init: function(canvas, context){
+                this.canvas = canvas;
+                this.context = context;
+                this.draw();
+            },
+
+            draw: function(){
+                // Dynamic canvas size
+                this.width = (this.cellSpace * this.cols) + (this.cellSize * this.cols);
+                this.canvas.setAttribute('width', this.width);
+
+                this.height = (this.cellSpace * this.rows) + (this.cellSize * this.rows);
+                this.canvas.getAttribute('height', this.height);
+
+                // Fill background
+                this.context.fillStyle = this.backgroundColor;
+                console.log(this.context.fillStyle);
+                this.context.fillRect(0, 0, this.width, this.height);
+
+                for (i = 0; i < this.cols; i++) {
+                  for (j = 0; j < this.rows; j++) {
+                    this.drawCell(i, j, false);
+                  }
+                }
+            },
+
+            drawCell: function (i, j, alive) {
+              if (alive) {
+                this.context.fillStyle = this.liveCellColor;
+              } else {
+                this.context.fillStyle = this.emptyCellColor;
+              }
+
+              this.context.fillRect(this.cellSpace + (this.cellSpace * i) + (this.cellSize * i),
+                                    this.cellSpace + (this.cellSpace * j) + (this.cellSize * j),
+                                    this.cellSize,
+                                    this.cellSize);
+            }
+        },
+
+        init: function(config){
+            this.canvas.init(config.canvas, config.context);
+            this.server.init(config.address);
+        }
     };
 })()
