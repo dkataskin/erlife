@@ -12,6 +12,8 @@
 
 init(_Transport, Req, _Opts, _Active) ->
         {SessionId, Req1} = cowboy_req:cookie(?session_id_cookie, Req),
+        {ok, _Pid} = start_engine(SessionId, InitialState),
+        erlang:send_after(100, self(), list_saved_states),
         {ok, Req1, #stream_state{ sessionId = SessionId }}.
 
 stream(<<"ping: ", Name/binary>>, Req, State) ->
@@ -27,6 +29,12 @@ stream(Data, Req, State) ->
             io:format("stream received something ~s~n", [Data]),
             {ok, Req, State}
         end.
+
+info(list_saved_states, Req, State) ->
+        io:format("list saved states command received~n"),
+        {ok, DumpList} = erlife_store:list(),
+        Reply = erlife_protocol:dump_list_to_json(DumpList),
+        {reply, Reply, Req, State};
 
 info(Info, Req, State) ->
         io:format("info received ~p~n", [Info]),

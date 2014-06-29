@@ -2,7 +2,6 @@
 -author("Dmitry Kataskin").
 
 -define(apps, [crypto, inets, ranch, cowlib, cowboy, gproc, sync, erlife]).
--author("Dmitry Kataskin").
 
 -export([start/0, stop/0]).
 

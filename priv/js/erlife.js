@@ -6,6 +6,9 @@
         onUpdate: function(genNum, nodeCount){
         },
 
+        onSavedStatesListLoaded: function(states){
+        },
+
         server: {
             bullet: null,
 
@@ -37,6 +40,10 @@
                                 if (erlife.isRunning){
                                     erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
                                 }
+                            } else if (event.event == "savedstates"){
+                                var data = event.data;
+                                erlife.onSavedStatesListLoaded(data);
+                                console.log("saved states loaded " + data);
                             }
                         }
                     }
@@ -52,8 +59,7 @@
             },
 
             nextGen: function(viewport, invalidate){
-                this.bullet.send($.toJSON({
-                                            command: "nextGen",
+                this.bullet.send($.toJSON({ command: "nextGen",
                                             data: {
                                                     viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY],
                                                     invalidate: invalidate
@@ -65,8 +71,12 @@
                 this.bullet.send($.toJSON({ command: "stop" }));
             },
 
-            loadState: function(){
-                this.bullet.send($.toJSON({ command: "stop" }));
+            loadState: function(id){
+                this.bullet.send($.toJSON({ command: "load",
+                                            data: {
+                                                    id: id,
+                                                    viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY]
+                                                  }}));
             }
         },
 
@@ -337,9 +347,11 @@
             }
         },
 
-        loadState(id){
-            if (!this.isRunning){
+        saveState: function()
 
+        loadState: function(id){
+            if (!this.isRunning){
+                this.server.loadState(id);
             }
         },
 

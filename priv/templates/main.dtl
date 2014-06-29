@@ -39,13 +39,20 @@
     </div>
 
     <div class="box layout">
-        <div class="subtitle">Saved States</div>
+        <div class="subtitle">Load</div>
         <form>
             <select id="selectSavedStates" width="150" />
             <input type="text" value="" width="150" />
             <input type="button" id="buttonLoad" value="Load"/>
-            <input type="button" id="buttonSave" value="Save" />
+            <input type="button" id="buttonOverwrite" value="Overwrite" />
             <span id="layoutMessages"></span>
+        </form>
+    </div>
+    <div class="box layout">
+        <div class="subtitle">Save</div>
+        <form>
+            <input id="textName" type="text" value="" width="150" />
+            <input type="button" id="buttonSave" value="Save"/>
         </form>
     </div>
     <script>
@@ -58,6 +65,15 @@
             erlife.onUpdate = function(genNum, nodeCount){
                 $("#generation").text(genNum);
                 $("#livecells").text(nodeCount);
+            };
+
+            erlife.onSavedStatesListLoaded = function(list){
+                $("#selectSavedStates").empty();
+                var options = $("#selectSavedStates");
+
+                list.forEach(function(state) {
+                    options.append($("<option />").val(state.id).text(state.name));
+                });
             };
 
             $("#buttonRun").click(function(){
@@ -82,6 +98,21 @@
 
             $("#buttonClear").click(function(){
                 erlife.stop();
+            });
+
+            $("#buttonSave").click(function(){
+                if (!erlife.isRunning || !erlife.isInitialized){
+                    alert("Initialize grid first by pressing run and then pause or step button.");
+                }
+                else {
+                    var name = $("textName").val();
+                    if (!name){
+                        alert("Would be good to assign some name.");
+                    }
+                    else{
+                        erlife.loadState
+                    }
+                }
             });
 
             erlife.init({ address: 'ws://localhost:8085/erlife',
