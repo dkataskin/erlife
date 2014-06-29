@@ -12,22 +12,30 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([next_gen/1, print/1]).
+-export([next_gen/2, print/1]).
 
 -record(state, { gen = 0 }).
 
+-type cellkey() :: binary().
+-type point() :: {int(), int()}.
+-type viewport() :: {point(), point()}.
+-type cellaction() :: die | arise.
+-type celldelta() :: {cellkey(), cellaction()}.
+
 % api
 start_link(InitialState) ->
-  gen_server:start_link(?MODULE, [InitialState], []).
+        gen_server:start_link(?MODULE, [InitialState], []).
 
-next_gen(Pid) ->
-  gen_server:call(Pid, next_gen).
+-spec next_gen(Pid::pid(), ViewPort::viewport()) -> {GenNum::int(), CellDelta::[celldelta()]}.
+next_gen(Pid, ViewPort) ->
+        gen_server:call(Pid, {next_gen, ViewPort}).
 
+-spec print(Pid::pid()) -> ok.
 print(Pid) ->
-  gen_server:call(Pid, print).
+        gen_server:call(Pid, print).
 
 % gen_server callbacks
-% [{1,1},{2,2]
+-spec init(InitialState::[point()]) -> {ok, pid()}.
 init([InitialState]) ->
         ets:new(?node_table, [set, {keypos, 1}, {read_concurrency, true}, named_table]),
         fill_initial(InitialState),
@@ -79,14 +87,17 @@ traverse_univ() ->
 traverse_cell(Cell={Key, alive}, Actions, LookupTabId) ->
         Neig = get_neig(Key),
         Count = alive_count(Neig),
-        Actions1 = add_action(Cell, Count, Actions),
+        add_action(Cell, Count, LookupTabId),
 
-        Fun = fun(CellElem={_, State}, Acc) ->
+        Fun = fun(CellElem={CellKey, State}, Acc) ->
                 case State of
                   alive ->
                     Acc;
                   empty ->
-                    traverse_cell(CellElem, Acc)
+                    case ets:lookup(LookupTabId, CellKey) of
+                      [] -> traverse_cell(CellElem, Acc);
+                      [_] -> Acc
+                    end
                 end
               end,
 
@@ -97,25 +108,33 @@ traverse_cell(Cell={Key, empty}, Actions) ->
         Count = alive_count(Neig),
         add_action(Cell, Count, Actions).
 
-add_action({Key, empty}, Count, Actions) when Count =:= 3 ->
-        [{arise, Key} | Actions];
+add_action({Key, empty}, Count, LookupTabId) when Count =:= 3 ->
+        <<X:64, Y:64>> = Key,
+        ets:insert(LookupTabId, {Key, arise, X, Y}),
+        ok;
 
-add_action({_, empty}, _, Actions) ->
-        Actions;
+add_action({_, empty}, _, _) ->
+        ok;
 
-add_action({Key, alive}, Count, Actions) when Count < 2 orelse Count > 3 ->
-        [{die, Key} | Actions];
+add_action({Key, alive}, Count, LookupTabId) when Count < 2 orelse Count > 3 ->
+        <<X:64, Y:64>> = Key,
+        ets:insert(LookupTabId, {Key, die, X, Y}),
+        ok;
 
-add_action({_, alive}, _, Actions) ->
-        Actions.
+add_action({_, alive}, _, _) ->
+        ok.
 
-execute_actions(Actions) ->
-        lists:foreach(fun exec_action/1, Actions).
+execute_actions(LookupTabId) ->
+        Fun = fun(Action, _) ->
+                exec_action(Action),
+                no_acc
+              end,
+        ets:foldl(Fun, no_acc, LookupTabId).
 
-exec_action({die, Key}) ->
+exec_action({Key, die}) ->
         ets:delete(?node_table, Key);
 
-exec_action({arise, Key}) ->
+exec_action({Key, arise}) ->
         ets:insert(?node_table, {Key, alive}).
 
 alive_count(Cells) ->
