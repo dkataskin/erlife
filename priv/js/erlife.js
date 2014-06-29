@@ -72,10 +72,9 @@
                                             }}));
             },
 
-            loadState: function(id){
+            loadState: function(id, viewport){
                 this.bullet.send($.toJSON({ command: "load",
-                                            data: {
-                                                    id: id,
+                                            data: { id: id,
                                                     viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY]
                                                   }}));
             }
@@ -345,7 +344,9 @@
 
         loadState: function(id){
             if (!this.isRunning){
-                this.server.loadState(id);
+                this.canvas.clear();
+                var viewport = this.viewport.getView();
+                this.server.loadState(id, viewport);
             }
         },
 

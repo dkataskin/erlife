@@ -120,7 +120,13 @@
             });
 
             $("#buttonLoad").click(function(){
-                //erlife.saveState(name);
+                var id = $("#selectSavedStates option:selected").val();
+                erlife.loadState(id);
+            });
+
+            $("#selectSavedStates").on("change", function() {
+                var name = $("#selectSavedStates option:selected").text();
+                $("#textLoadedStateName").val(name);
             });
 
             erlife.init({ address: 'ws://localhost:8085/erlife',

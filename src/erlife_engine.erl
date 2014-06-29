@@ -269,7 +269,8 @@ fill_by_key(X, Y, TabId, Acc) ->
           [] ->
             Acc;
           [_] ->
-            [{translate(to_client, X), translate(to_client, Y), arise} | Acc]
+            {X1, Y1} = translate(to_client, {X, Y}),
+            [{X1, Y1, arise} | Acc]
         end.
 
 get_state(Key, TabId) ->
