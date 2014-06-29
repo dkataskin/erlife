@@ -42,7 +42,7 @@ print(Pid) ->
 % gen_server callbacks
 -spec init(InitialState::[point()]) -> {ok, pid()}.
 init([Id, InitialState]) ->
-        TabId = ets:new(node_table, [set, {keypos, 1}, {read_concurrency, true}]),
+        TabId = ets:new(node_table, [set, {keypos, 1}]),
         fill_initial(InitialState, TabId),
         gproc:add_local_name(Id),
         {ok, #state{ gen = 0, tab_id = TabId }}.
