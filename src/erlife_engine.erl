@@ -72,10 +72,14 @@ handle_call(print, _From, State=#state { tab_id = TabId }) ->
 
 handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        Fun = fun({X, Y, Action}) ->
-                X1 = translate(to_server, X),
-                Y1 = translate(to_server, Y),
-                {<<X1:64, Y1:64>>, Action}
+        Fun = fun({X, Y, Alive}) ->
+                {X1, Y1} = translate(to_server, {X, Y}),
+                case Alive of
+                  true ->
+                    {<<X1:64, Y1:64>>, arise};
+                  false ->
+                    {<<X1:64, Y1:64>>, die}
+                end
               end,
         ChangesToState1 = lists:map(Fun, ChangesToState),
         ok = apply_changes_to_state(ChangesToState1, TabId),

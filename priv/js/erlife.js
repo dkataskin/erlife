@@ -36,9 +36,7 @@
                         if (event){
                             if (event.event == "nextGen"){
                                 var data = event.data;
-                                if (erlife.isRunning){
-                                    erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
-                                }
+                                erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
                             } else if (event.event == "savedstates"){
                                 var data = event.data;
                                 erlife.onSavedStatesListLoaded(data);
@@ -53,10 +51,11 @@
                 }
             },
 
-            nextGen: function(viewport, invalidate){
+            nextGen: function(viewport, changes, invalidate){
                 this.bullet.send($.toJSON({ command: "nextGen",
                                             data: {
                                                     viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY],
+                                                    statechanges: changes,
                                                     invalidate: invalidate
                                                   }
                                           }));
@@ -87,7 +86,7 @@
 
                 setTimeout(function() {
                     if (erlife.isRunning){
-                        erlife.update();
+                        erlife.update([]);
                     }}, 100);
             }
         },
@@ -142,6 +141,7 @@
                         var node = this.array[i];
                         result.push(node.x - erlife.canvas.offsetX + 1);
                         result.push(node.y - erlife.canvas.offsetY + 1);
+                        result.push(true);
                     }
 
                     return result;
@@ -300,11 +300,11 @@
 
         run: function(){
             if (!this.isRunning){
-
+                var changesToState = this.canvas.userState.getState();
                 this.canvas.userState.clear();
 
                 this.isRunning = true;
-                this.update();
+                this.update(changesToState);
             }
         },
 
@@ -316,7 +316,9 @@
 
         nextGen: function(){
             if (!this.isRunning){
-                this.update();
+                var changesToState = this.canvas.userState.getState();
+                this.canvas.userState.clear();
+                this.update(changesToState);
             }
         },
 
@@ -324,11 +326,11 @@
             this.isRunning = false;
             this.server.clear();
             this.canvas.clear();
-        }
+        },
 
-        update: function(){
+        update: function(changes){
             var viewport = this.viewport.getView();
-            this.server.nextGen(viewport, this.viewport.invalidate);
+            this.server.nextGen(viewport, changes, this.viewport.invalidate);
         },
 
         saveState: function(name){

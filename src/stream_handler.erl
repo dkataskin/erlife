@@ -50,26 +50,20 @@ execute_command([{<<"command">>, Command} | T], Req, State) ->
 
 execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
         %io:format("user commanded: nextGen, data:~p~n", [Data]),
-        {ok, Viewport, Options} = erlife_protocol:parse_nextgen_input(Data),
+        {ok, Viewport, StateChanges, Options} = erlife_protocol:parse_nextgen_input(Data),
         Fun = fun(Pid) ->
-                {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, Options),
+                {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, StateChanges, Options),
                 erlife_protocol:gen_delta_to_json(GenNum, Delta)
               end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
-
-%execute_command(<<"start">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-%        io:format("user commanded: start; data:~p~n", [Data]),
-%        InitialState = erlife_protocol:parse_initial_input(Data),
-%        {ok, _Pid} = start_engine(SessionId, InitialState),
-%        {ok, Req, State};
 
 execute_command(<<"clear">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
         io:format("user commanded: clear~n"),
         Fun = fun(Pid) ->
                 {ok, cleared} = erlife_engine:clear(Pid),
                 {ok, no_reply}
-        end,
+              end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
 

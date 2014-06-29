@@ -2,20 +2,23 @@
 -author("Dmitry Kataskin").
 
 %% API
--export([parse_nextgen_input/1, parse_initial_input/1, parse_save_input/1, parse_load_input/1]).
+-export([parse_nextgen_input/1, parse_save_input/1, parse_load_input/1]).
 -export([dump_list_to_json/1, gen_delta_to_json/2]).
 
-parse_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]}, {<<"invalidate">>, Invalidate}]) ->
+parse_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]},
+                     {<<"statechanges">>, StateChanges},
+                     {<<"invalidate">>, Invalidate}]) ->
         Viewport = {{MinX, MinY}, {MaxX, MaxY}},
+        StateChanges1 = parse_state_changes(StateChanges),
         case Invalidate of
           true ->
-            {ok, Viewport, [invalidate]};
+            {ok, Viewport, StateChanges1, [invalidate]};
           false ->
-            {ok, Viewport, []}
+            {ok, Viewport, StateChanges1, []}
         end.
 
-parse_initial_input(Nodes) ->
-        array_to_state(Nodes, []).
+parse_state_changes(Array) ->
+        array_to_state_changes(Array, []).
 
 parse_save_input([{<<"name">>, Name}]) ->
         Name.
@@ -24,11 +27,11 @@ parse_load_input([{<<"id">>, Id}, {<<"viewport">>, [MinX, MinY, MaxX, MaxY]}]) -
         Viewport = {{MinX, MinY}, {MaxX, MaxY}},
         {Id, Viewport}.
 
-array_to_state([], Acc) ->
+array_to_state_changes([], Acc) ->
         Acc;
 
-array_to_state([X, Y | T], Acc) ->
-        array_to_state(T, [{X, Y} | Acc]).
+array_to_state_changes([X, Y, Alive | T], Acc) ->
+        array_to_state_changes(T, [{X, Y, Alive} | Acc]).
 
 dump_list_to_json(Dumps) ->
       Fun = fun({Id, Name}, Acc) ->
