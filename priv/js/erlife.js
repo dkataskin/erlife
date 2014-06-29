@@ -87,8 +87,8 @@
                     var result = new Array();
                     for(var i = 0; i < this.array.length; i++){
                         var node = this.array[i];
-                        result.push({ x: node.x - erlife.canvas.offsetX + 1,
-                                      y: node.y - erlife.canvas.offsetY + 1 });
+                        result.push(node.x - erlife.canvas.offsetX + 1);
+                        result.push(node.y - erlife.canvas.offsetY + 1);
                     }
 
                     return result;
