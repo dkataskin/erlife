@@ -35,8 +35,10 @@
             canvas: null,
             width: 900,
             height: 500,
-            cols: 100,
-            rows: 100,
+            cols: 99,
+            rows: 99,
+            offsetX: 45,
+            offsetY: 45,
             cellSize: 8,
             cellSpace: 1,
             backgroundColor: '#B5B8B4',
@@ -44,6 +46,34 @@
             emptyCellColor: '#F3F3F3',
             mousedown: false,
             dragging: false,
+            userState: {
+                array: [],
+
+                set: function(x, y){
+                    var exists = false;
+                    var index = 0;
+                    for(i = 0; i < this.array.length; i++){
+                        if (this.array[i].x == x && this.array[i].y == y){
+                            exists = true;
+                            index = i;
+                            break;
+                        }
+                    }
+
+                    if (exists){
+                        this.array.pop(index);
+                    }
+                    else {
+                        this.array.push({x: x, y: y});
+                    }
+
+                    return !exists;
+                },
+
+                clear: function(){
+                    this.array = [];
+                }
+            },
 
             init: function(canvas, context){
                 this.canvas = canvas;
@@ -88,20 +118,85 @@
                                     this.cellSize);
             },
 
+            mousePosition: function(e){
+                // http://www.malleus.de/FAQ/getImgMousePos.html
+                // http://www.quirksmode.org/js/events_properties.html#position
+                var event, x, y, domObject, posx = 0, posy = 0, top = 0, left = 0, cellSize = this.cellSize + 1;
+
+                event = e;
+                if (!event) {
+                  event = window.event;
+                }
+
+                if (event.pageX || event.pageY){
+                  posx = event.pageX;
+                  posy = event.pageY;
+                } else if (event.clientX || event.clientY){
+                    posx = event.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+                    posy = event.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+                }
+
+                domObject = event.target || event.srcElement;
+
+                while ( domObject.offsetParent ) {
+                  left += domObject.offsetLeft;
+                  top += domObject.offsetTop;
+                  domObject = domObject.offsetParent;
+                }
+
+                domObject.pageTop = top;
+                domObject.pageLeft = left;
+
+                x = Math.ceil(((posx - domObject.pageLeft)/cellSize) - 1);
+                y = Math.ceil(((posy - domObject.pageTop)/cellSize) - 1);
+
+                console.log("x=" + x + " y=" + y);
+                return {x: x, y: y};
+            },
+
             onmousedown: function(e){
-                this.mousedown = true;
+                erlife.canvas.mousedown = true;
             },
 
             onmousemove: function(e){
-                if (this.mousedown && !this.dragging){
-                    this.dragging = true;
+                if (erlife.canvas.mousedown && !erlife.canvas.dragging){
+                    erlife.canvas.dragging = true;
                 }
             },
 
             onmouseup: function(e){
-                this.mousedown = false;
-                if (this.dragging){
-                    this.dragging = false;
+                erlife.canvas.mousedown = false;
+                if (erlife.canvas.dragging){
+                    erlife.canvas.dragging = false;
+                } else {
+                    var position = erlife.canvas.mousePosition(e);
+                    if (erlife.canvas.userState.set(position.x, position.y)){
+                        erlife.canvas.drawCell(position.x, position.y, true);
+                    }
+                    else{
+                        erlife.canvas.drawCell(position.x, position.y, false);
+                    }
+                }
+            }
+        },
+
+        viewport: {
+            offsetX: 0,
+            offsetY: 0,
+            viewPortWidth: 100,
+            viewPortHeight: 100,
+
+            setOffset: function(offsetX, offsetY){
+                this.offsetX = offsetX;
+                this.offsetY = offsetY;
+            },
+
+            getView: function(){
+                return {
+                    minX: offsetX - (viewPortWidth / 2),
+                    maxX: offsetX + (viewPortWidth / 2),
+                    minY: offsetY - (viewPortHeight / 2),
+                    maxY: offsetY + (viewPortHeight / 2)
                 }
             }
         },
