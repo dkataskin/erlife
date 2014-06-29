@@ -9,7 +9,7 @@
 
 %% API
 -export([start_link/0]).
--export([save/2, update/3, load/2, list/0]).
+-export([save/2, update/3, load/1, list/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -23,8 +23,8 @@ save(Name, TabId) ->
 update(Id, Name, TabId) ->
         gen_server:call(?erlife_store, {update, {Id, Name, TabId}}).
 
-load(Id, Pid) ->
-        gen_server:call(?erlife_store, {load, {Id, Pid}}).
+load(Id) ->
+        gen_server:call(?erlife_store, {load, Id}).
 
 list() ->
         gen_server:call(?erlife_store, list).
@@ -46,9 +46,9 @@ handle_call({update, {Id, Name, TabId}}, _From, State) ->
         dets:insert(?dumps_table, {Id, Name}),
         {reply, {updated, Id}, State};
 
-handle_call({load, {Id, Pid}}, _From, State) ->
+handle_call({load, Id}, From, State) ->
         {ok, TabId} = ets:file2tab(get_filename(Id)),
-        true = ets:give_away(TabId, Pid, enjoy),
+        true = ets:give_away(TabId, From, enjoy),
         {reply, {loaded, TabId}, State};
 
 handle_call(list, _From, State) ->

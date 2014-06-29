@@ -12,6 +12,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
 -export([next_gen/2, next_gen/3, print/1]).
+-export([dump_state/1, restore_from_dump/2]).
+-export([print/1]).
 
 -record(state, { gen = 0, tab_id = undefined }).
 
@@ -34,6 +36,12 @@ next_gen(Pid, Viewport) ->
 
 next_gen(Pid, Viewport, Options) ->
         gen_server:call(Pid, {next_gen, Viewport, Options}).
+
+dump_state(Pid) ->
+        gen_server:call(Pid, dump_state).
+
+restore_from_dump(Pid, DumpTabId) ->
+        gen_server:call(Pid, {restore_from_dump, DumpTabId}).
 
 -spec print(Pid::pid()) -> ok.
 print(Pid) ->
@@ -67,6 +75,14 @@ handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen, tab
 
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Resp}}, NewState};
+
+handle_call(dump_state, _From, State=#state { tab_id = TabId }) ->
+        {reply, {dumped, TabId}, State};
+
+handle_call({restore_from_dump, DumpTabId}, _From, State=#state { tab_id = TabId }) ->
+        true = ets:delete(TabId),
+        NewState = #state { gen = 0, tab_id = DumpTabId },
+        {reply, {ok, restored}, NewState};
 
 handle_call(stop, _From, State) ->
         {stop, normal, ok, State};
