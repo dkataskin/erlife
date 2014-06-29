@@ -2,7 +2,9 @@
 
 -author("Dmitry Kataskin").
 
--record(handler_state, { running = false, pid = undefined }).
+-record(stream_state, { running = false,
+                        pid = undefined,
+                        sessionId = undefined }).
 
 -export([init/4]).
 -export([stream/3]).
@@ -10,7 +12,7 @@
 -export([terminate/2]).
 
 init(_Transport, Req, _Opts, _Active) ->
-        {ok, Req, #handler_state{}}.
+        {ok, Req, #stream_state{}}.
 
 stream(<<"ping: ", Name/binary>>, Req, State) ->
         io:format("ping ~p received~n", [Name]),
@@ -21,8 +23,8 @@ stream(Data, Req, State) ->
           true ->
             %io:format("stream received valid json ~s~n", [Data]),
             Json = jsx:decode(Data),
-            {ok, Req1, State1} = execute_command(Json, Req, State),
-            {ok, Req1, State1};
+            execute_command(Json, Req, State);
+
           false ->
             io:format("stream received something ~s~n", [Data]),
             {ok, Req, State}
@@ -39,11 +41,12 @@ terminate(_Req, _State) ->
 execute_command([{<<"command">>, Command} | T], Req, State) ->
         execute_command(Command, T, Req, State).
 
-execute_command(<<"nextGen">>, _, Req, State) ->
+execute_command(<<"nextGen">>, _, Req, State=#stream_state{ pid = Pid }) ->
         io:format("user commanded: nextGen~n"),
-        {ok, Req, State};
+        {ok, GenNum, Delta} = erlife_engine:next_gen(Pid),
+        {reply, get_delta_json(GenNum, Delta), Req, State};
 
-execute_command(<<"start">>, Data, Req, State) ->
+execute_command(<<"start">>, Data, Req, State=#stream_state{}) ->
         io:format("user commanded: start; data:~p~n", [Data]),
         {ok, Req, State};
 
@@ -54,3 +57,18 @@ execute_command(<<"stop">>, _, Req, State) ->
 execute_command(Command, _, Req, State) ->
         io:format("unknown command ~p received ~n", [Command]),
         {ok, Req, State}.
+
+get_delta_json(GenNum, Delta) ->
+        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, compact_delta(Delta)}]).
+
+compact_delta(Delta) ->
+        Fun = fun({Action, <<X:64, Y:64>>}) ->
+                case Action of
+                  die ->
+                    [false, X, Y];
+                  arise ->
+                    [true, X, Y]
+                end
+              end,
+        lists:map(Fun, Delta).
+
