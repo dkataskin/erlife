@@ -26,9 +26,9 @@
 start_link(InitialState) ->
         gen_server:start_link(?MODULE, [InitialState], []).
 
--spec next_gen(Pid::pid(), ViewPort::viewport()) -> {GenNum::int(), CellDelta::[celldelta()]}.
-next_gen(Pid, ViewPort) ->
-        gen_server:call(Pid, {next_gen, ViewPort}).
+-spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::int(), CellDelta::[celldelta()]}.
+next_gen(Pid, Viewport) ->
+        gen_server:call(Pid, {next_gen, Viewport}).
 
 -spec print(Pid::pid()) -> ok.
 print(Pid) ->
@@ -48,15 +48,8 @@ handle_call(print, _From, State) ->
                   end, [], ?node_table),
         {reply, ok, State};
 
-handle_call(next_gen, _From, State=#state{ gen = Gen }) ->
-        Delta = traverse_univ(),
-        lists:foreach(fun({Action, Key}) ->
-                        {X, Y} = to_point(Key),
-                        io:format("~p {~p,~p}~n", [Action, X, Y])
-                      end, Delta),
-
-        execute_actions(Delta),
-
+handle_call({next_gen, Viewport}, _From, State=#state{ gen = Gen }) ->
+        {ok, Delta} = next_gen(Viewport),
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Delta}}, NewState};
 
@@ -79,50 +72,77 @@ fill_initial(InitialState) ->
         lists:foreach(fun({X, Y}) -> ets:insert(?node_table, {to_key(X, Y), alive}) end, InitialState),
         ok.
 
-traverse_univ() ->
+next_gen(Viewport) ->
         TabId = ets:new(lookup_table, [set, {keypos, 1}]),
-        Fun = fun(Cell, Acc) -> traverse_cell(Cell, Acc, TabId) end,
+        Delta = calc_next_gen(Viewport, TabId),
+        lists:foreach(fun({Action, Key}) ->
+                        {X, Y} = to_point(Key),
+                        io:format("~p {~p,~p}~n", [Action, X, Y])
+                      end, Delta),
+        execute_actions(Delta),
+        ets:delete(TabId),
+
+        {ok, Delta}.
+
+calc_next_gen(Viewport, LookupTabId) ->
+        Fun = fun(Cell, Acc) -> traverse_cell(Cell, Acc, LookupTabId, Viewport) end,
         ets:foldl(Fun, [], ?node_table).
 
-traverse_cell(Cell={Key, alive}, Actions, LookupTabId) ->
+traverse_cell(Cell={Key, alive}, ViewportDelta, LookupTabId, Viewport) ->
         Neig = get_neig(Key),
         Count = alive_count(Neig),
-        add_action(Cell, Count, LookupTabId),
+        {ok, Action} = add_action(Cell, Count, LookupTabId),
+        ViewportDelta1 = add_to_viewport(Action, Viewport, ViewportDelta),
 
-        Fun = fun(CellElem={CellKey, State}, Acc) ->
+        Fun = fun(CellElem={CellKey, State}, ViewportDelta2) ->
                 case State of
                   alive ->
-                    Acc;
+                    ViewportDelta2;
+
                   empty ->
                     case ets:lookup(LookupTabId, CellKey) of
-                      [] -> traverse_cell(CellElem, Acc);
-                      [_] -> Acc
+                      [] -> traverse_cell(CellElem, ViewportDelta2, LookupTabId, Viewport);
+                      [_] -> ViewportDelta2
                     end
                 end
               end,
 
-        lists:foldl(Fun, Actions1, Neig);
+        lists:foldl(Fun, ViewportDelta1, Neig);
 
-traverse_cell(Cell={Key, empty}, Actions) ->
+traverse_cell(Cell={Key, empty}, ViewportDelta, LookupTabId, Viewport) ->
         Neig = get_neig(Key),
         Count = alive_count(Neig),
-        add_action(Cell, Count, Actions).
+        {ok, Action} = add_action(Cell, Count, LookupTabId),
+        ViewportDelta1 = add_to_viewport(Action, Viewport, ViewportDelta),
+        ViewportDelta1.
 
 add_action({Key, empty}, Count, LookupTabId) when Count =:= 3 ->
         <<X:64, Y:64>> = Key,
-        ets:insert(LookupTabId, {Key, arise, X, Y}),
-        ok;
+        Action = {Key, arise, X, Y},
+        ets:insert(LookupTabId, Action),
+        {ok, Action};
 
 add_action({_, empty}, _, _) ->
-        ok;
+        {ok, no_action};
 
 add_action({Key, alive}, Count, LookupTabId) when Count < 2 orelse Count > 3 ->
         <<X:64, Y:64>> = Key,
-        ets:insert(LookupTabId, {Key, die, X, Y}),
-        ok;
+        Action = {Key, die, X, Y},
+        ets:insert(LookupTabId, Action),
+        {ok, Action};
 
 add_action({_, alive}, _, _) ->
-        ok.
+        {ok, no_action}.
+
+add_to_viewport(no_action, _, ViewportDelta) ->
+        ViewportDelta;
+
+add_to_viewport({_, State, X, Y}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportDelta)
+    when X >= MinX andalso X =< MaxX andalso Y >= MinY andalso Y =< MaxY ->
+        [{X, Y, State} | ViewportDelta];
+
+add_to_viewport(_, _, ViewportDelta) ->
+        ViewportDelta.
 
 execute_actions(LookupTabId) ->
         Fun = fun(Action, _) ->
