@@ -63,6 +63,10 @@
 
             stop: function(){
                 this.bullet.send($.toJSON({ command: "stop" }));
+            },
+
+            loadState: function(){
+                this.bullet.send($.toJSON({ command: "stop" }));
             }
         },
 
@@ -330,6 +334,12 @@
             if (this.isRunning){
                 var viewport = this.viewport.getView();
                 this.server.nextGen(viewport, this.viewport.invalidate);
+            }
+        },
+
+        loadState(id){
+            if (!this.isRunning){
+
             }
         },
 

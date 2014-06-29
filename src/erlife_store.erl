@@ -23,8 +23,8 @@ save(Name, TabId) ->
 update(Id, Name, TabId) ->
         gen_server:call(?erlife_store, {update, {Id, Name, TabId}}).
 
-load(Id) ->
-        gen_server:call(?erlife_store, {load, Id}).
+load(Id, Pid) ->
+        gen_server:call(?erlife_store, {load, {Id, Pid}}).
 
 list() ->
         gen_server:call(?erlife_store, list).
@@ -46,9 +46,9 @@ handle_call({update, {Id, Name, TabId}}, _From, State) ->
         dets:insert(?dumps_table, {Id, Name}),
         {reply, {updated, Id}, State};
 
-handle_call({load, Id}, From, State) ->
+handle_call({load, {Id, Pid}}, _From, State) ->
         {ok, TabId} = ets:file2tab(get_filename(Id)),
-        true = ets:give_away(TabId, From, enjoy),
+        true = ets:give_away(TabId, Pid, enjoy),
         {reply, {loaded, TabId}, State};
 
 handle_call(list, _From, State) ->

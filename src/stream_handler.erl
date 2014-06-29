@@ -42,7 +42,7 @@ execute_command([{<<"command">>, Command} | T], Req, State) ->
 
 execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
         %io:format("user commanded: nextGen, data:~p~n", [Data]),
-        {ok, Viewport, Options} = get_nextgen_input(Data),
+        {ok, Viewport, Options} = erlife_protocol:parse_nextgen_input(Data),
         Fun = fun(Pid) ->
                 {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, Options),
                 erlife_protocol:gen_delta_to_json(GenNum, Delta)
@@ -72,21 +72,20 @@ execute_command(<<"save">>, [{<<"data">>, Data}], Req, State=#stream_state{ sess
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
 
+execute_command(<<"load">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
+        {Id, Viewport} = erlife_protocol:parse_load_input(Data),
+        Fun = fun(Pid) ->
+                {loaded, TabId} = erlife_store:load(Id, Pid),
+                {ok, restored} = erlife_engine:restore_from_dump(Pid, TabId),
+                {ok, ViewportData} = erlife_engine:get_viewport(Pid, Viewport),
+                erlife_protocol:gen_delta_to_json(0, ViewportData)
+              end,
+        Resp = execute_on_server(SessionId, Fun),
+        reply(Resp, Req, State);
+
 execute_command(Command, _, Req, State) ->
         io:format("unknown command ~p received ~n", [Command]),
         {ok, Req, State}.
-
-get_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]}, {<<"invalidate">>, Invalidate}]) ->
-        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
-        case Invalidate of
-          true ->
-            {ok, Viewport, [invalidate]};
-          false ->
-            {ok, Viewport, []}
-        end;
-
-get_nextgen_input(_) ->
-        {ok, {{-50, -50}, {50, 50}}, []}.
 
 execute_on_server(SessionId, Fun) ->
         case gproc:lookup_local_name(SessionId) of

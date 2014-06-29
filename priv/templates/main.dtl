@@ -35,16 +35,16 @@
             <input type="button" value="Run" id="buttonRun" />
             <input type="button" value="Step" id="buttonStep" />
             <input type="button" value="Clear" id="buttonClear" />
-            <input type="button" value="Export" id="buttonExport" />
         </form>
     </div>
 
     <div class="box layout">
-        <div class="subtitle">Layout</div>
+        <div class="subtitle">Saved States</div>
         <form>
-            <input type="button" id="buttonTrail" value="Trail"/>
-            <input type="button" id="buttonGrid" value="Grid" />
-            <input type="button" id="buttonColors" value="Colors" />
+            <select id="selectSavedStates" width="150" />
+            <input type="text" value="" width="150" />
+            <input type="button" id="buttonLoad" value="Load"/>
+            <input type="button" id="buttonSave" value="Save" />
             <span id="layoutMessages"></span>
         </form>
     </div>
@@ -74,6 +74,10 @@
                 if (!erlife.isRunning){
                     erlife.nextGen();
                 };
+            });
+
+            $("#buttonClear").click(function(){
+                erlife.stop();
             });
 
             $("#buttonClear").click(function(){

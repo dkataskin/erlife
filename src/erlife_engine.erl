@@ -13,6 +13,7 @@
 
 -export([next_gen/2, next_gen/3, print/1]).
 -export([dump_state/1, restore_from_dump/2]).
+-export([get_viewport/2]).
 -export([print/1]).
 
 -record(state, { gen = 0, tab_id = undefined }).

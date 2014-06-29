@@ -2,8 +2,17 @@
 -author("Dmitry Kataskin").
 
 %% API
--export([parse_initial_input/1, parse_save_input/1, parse_load_input/1]).
+-export([parse_nextgen_input/1, parse_initial_input/1, parse_save_input/1, parse_load_input/1]).
 -export([dump_list_to_json/1, gen_delta_to_json/2]).
+
+parse_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]}, {<<"invalidate">>, Invalidate}]) ->
+        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
+        case Invalidate of
+          true ->
+            {ok, Viewport, [invalidate]};
+          false ->
+            {ok, Viewport, []}
+        end.
 
 parse_initial_input(Nodes) ->
         array_to_state(Nodes, []).
@@ -11,8 +20,9 @@ parse_initial_input(Nodes) ->
 parse_save_input([{<<"name">>, Name}]) ->
         Name.
 
-parse_load_input([{<<"Id">>, Id}]) ->
-        Id.
+parse_load_input([{<<"id">>, Id}, {<<"viewport">>, [MinX, MinY, MaxX, MaxY]}]) ->
+        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
+        {Id, Viewport}.
 
 array_to_state([], Acc) ->
         Acc;
@@ -31,7 +41,7 @@ dump_list_to_json(Dumps) ->
               [Json | Acc]
             end,
       DumpList = lists:foldl(Fun, [], Dumps),
-      jsx:encode([{<<"event">>, <<"dumps">>},
+      jsx:encode([{<<"event">>, <<"savedstates">>},
                   {<<"data">>, DumpList}]).
 
 gen_delta_to_json(GenNum, Delta) ->
