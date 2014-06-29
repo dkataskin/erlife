@@ -1,4 +1,5 @@
 -module(erlife_sup).
+-author("Dmitry Kataskin").
 
 -behaviour(supervisor).
 
@@ -23,5 +24,6 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {one_for_one, 5, 10}, []} }.
+    Store = {erlife_store, {erlife_store, start_link, []}, 5000, worker, [erlife_store]},
+    {ok, {{one_for_one, 5, 10}, [Store]}}.
 
