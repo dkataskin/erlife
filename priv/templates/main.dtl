@@ -93,25 +93,17 @@
             });
 
             $("#buttonClear").click(function(){
-                erlife.stop();
-            });
-
-            $("#buttonClear").click(function(){
-                erlife.stop();
+                erlife.clear();
+                $("#buttonRun").attr('value', 'Run');
             });
 
             $("#buttonSave").click(function(){
-                if (!erlife.isRunning || !erlife.isInitialized){
-                    alert("Initialize grid first by pressing run and then pause or step button.");
+                var name = $("textName").val();
+                if (!name){
+                    alert("Would be good to assign some name.");
                 }
-                else {
-                    var name = $("textName").val();
-                    if (!name){
-                        alert("Would be good to assign some name.");
-                    }
-                    else{
-                        erlife.loadState
-                    }
+                else{
+                    erlife.loadState
                 }
             });
 

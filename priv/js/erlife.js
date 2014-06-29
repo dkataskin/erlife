@@ -1,7 +1,6 @@
 (function(){
     var erlife = window.erlife = {
         isRunning: false,
-        isInitialized: false,
 
         onUpdate: function(genNum, nodeCount){
         },
@@ -54,10 +53,6 @@
                 }
             },
 
-            start: function(userState){
-                this.bullet.send($.toJSON({ command: "start", data: userState }));
-            },
-
             nextGen: function(viewport, invalidate){
                 this.bullet.send($.toJSON({ command: "nextGen",
                                             data: {
@@ -67,8 +62,13 @@
                                           }));
             },
 
-            stop: function(){
-                this.bullet.send($.toJSON({ command: "stop" }));
+            clear: function(){
+                this.bullet.send($.toJSON({ command: "clear" }));
+            },
+
+            saveState: function(name){
+                this.bullet.send($.toJSON({ command: "save",
+                                            data: { name: name }}));
             },
 
             loadState: function(id){
@@ -156,6 +156,11 @@
                 this.canvas.onmousemove = this.onmousemove;
 
                 this.draw();
+            },
+
+            clear: function(){
+                erlife.canvas.draw();
+                erlife.canvas.userState.clear();
             },
 
             draw: function(){
@@ -295,9 +300,8 @@
 
         run: function(){
             if (!this.isRunning){
-                if (!this.isInitialized){
-                    this.start();
-                };
+
+                this.canvas.userState.clear();
 
                 this.isRunning = true;
                 this.update();
@@ -312,42 +316,23 @@
 
         nextGen: function(){
             if (!this.isRunning){
-                if (!this.isInitialized){
-                    this.start();
-                };
-
                 this.update();
             }
         },
 
-        start: function(){
-            if (!this.isInitialized){
-                this.server.start(this.canvas.userState.getState());
-                this.canvas.userState.clear();
-
-                this.isInitialized = true;
-            }
-        },
-
-        stop: function(){
-            if (this.isInitialized){
-                this.server.stop();
-                this.canvas.draw();
-
-                this.isInitialized = false;
-            }
-
+        clear: function(){
             this.isRunning = false;
-        },
+            this.server.clear();
+            this.canvas.clear();
+        }
 
         update: function(){
-            if (this.isRunning){
-                var viewport = this.viewport.getView();
-                this.server.nextGen(viewport, this.viewport.invalidate);
-            }
+            var viewport = this.viewport.getView();
+            this.server.nextGen(viewport, this.viewport.invalidate);
         },
 
-        saveState: function()
+        saveState: function(name){
+        },
 
         loadState: function(id){
             if (!this.isRunning){

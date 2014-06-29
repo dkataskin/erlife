@@ -6,14 +6,14 @@
 -define(center, trunc(math:pow(2, 64) / 2)).
 
 %% API
--export([start_link/2, stop/1]).
+-export([start_link/1, stop/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([next_gen/2, next_gen/3, print/1]).
+-export([next_gen/3, next_gen/4, print/1]).
 -export([dump_state/1, restore_from_dump/2]).
--export([get_viewport/2]).
+-export([clear/1, get_viewport/2]).
 -export([print/1]).
 
 -record(state, { gen = 0, tab_id = undefined }).
@@ -25,18 +25,21 @@
 -type celldelta() :: {cellkey(), cellaction()}.
 
 % api
-start_link(Id, InitialState) ->
-        gen_server:start_link(?MODULE, [Id, InitialState], []).
+start_link(Id) ->
+        gen_server:start_link(?MODULE, [Id], []).
 
 stop(Pid) ->
         gen_server:call(Pid, stop).
 
--spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::integer(), CellDelta::[celldelta()]}.
-next_gen(Pid, Viewport) ->
-        gen_server:call(Pid, {next_gen, Viewport, []}).
+%-spec next_gen(Pid::pid(), Viewport::viewport(), ChangesToState) -> {GenNum::integer(), CellDelta::[celldelta()]}.
+next_gen(Pid, Viewport, ChangesToState) ->
+        gen_server:call(Pid, {next_gen, Viewport, ChangesToState, []}).
 
-next_gen(Pid, Viewport, Options) ->
-        gen_server:call(Pid, {next_gen, Viewport, Options}).
+next_gen(Pid, Viewport, ChangesToState, Options) ->
+        gen_server:call(Pid, {next_gen, Viewport, ChangesToState, Options}).
+
+clear(Pid) ->
+        gen_server:call(Pid, clear).
 
 get_viewport(Pid, Viewport) ->
         gen_server:call(Pid, {get_viewport, Viewport}).
@@ -53,9 +56,8 @@ print(Pid) ->
 
 % gen_server callbacks
 -spec init(InitialState::[point()]) -> {ok, pid()}.
-init([Id, InitialState]) ->
+init([Id]) ->
         TabId = ets:new(node_table, [set, {keypos, 1}]),
-        fill_initial(InitialState, TabId),
         gproc:add_local_name(Id),
         {ok, #state{ gen = 0, tab_id = TabId }}.
 
@@ -66,8 +68,9 @@ handle_call(print, _From, State=#state { tab_id = TabId }) ->
                   end, [], TabId),
         {reply, ok, State};
 
-handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
+handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
+        ok = apply_changes_to_state(ChangesToState, TabId),
         {ok, Delta} = calc_next_gen(Viewport1, TabId),
 
         Resp = case proplists:lookup(invalidate, Options) of
@@ -93,6 +96,10 @@ handle_call({restore_from_dump, DumpTabId}, _From, #state { tab_id = TabId }) ->
         NewState = #state { gen = 0, tab_id = DumpTabId },
         {reply, {ok, restored}, NewState};
 
+handle_call(clear, _From, State=#state { tab_id = TabId }) ->
+        true = ets:delete_all_objects(TabId),
+        {reply, {ok, cleared}, State};
+
 handle_call(stop, _From, State) ->
         {stop, normal, ok, State};
 
@@ -111,8 +118,9 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
         {ok, State}.
 
-fill_initial(InitialState, TabId) ->
-        lists:foreach(fun({X, Y}) -> ets:insert(TabId, {to_key(X, Y), alive}) end, InitialState),
+apply_changes_to_state(ChangesToState, TabId) ->
+        Fun = fun({X, Y, Action}) -> exec_action({<<X:64, Y:64>>, Action}, TabId) end,
+        lists:foreach(Fun, ChangesToState),
         ok.
 
 calc_next_gen(Viewport, WorldTabId) ->
@@ -162,22 +170,20 @@ traverse_cell(Cell={Key, empty}, WorldTabId, LookupTabId) ->
         ok.
 
 decide_on_cell({Key, empty}, Count, LookupTabId) when Count =:= 3 ->
-        <<X:64, Y:64>> = Key,
-        ets:insert(LookupTabId, {Key, arise, X, Y}),
+        ets:insert(LookupTabId, {Key, arise}),
         ok;
 
 decide_on_cell({_, empty}, _, _) ->
         ok;
 
 decide_on_cell({Key, alive}, Count, LookupTabId) when Count < 2 orelse Count > 3 ->
-        <<X:64, Y:64>> = Key,
-        ets:insert(LookupTabId, {Key, die, X, Y}),
+        ets:insert(LookupTabId, {Key, die}),
         ok;
 
 decide_on_cell({_, alive}, _, _) ->
         ok.
 
-add_to_viewport({_, State, X, Y}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportDelta)
+add_to_viewport({<<X:64, Y:64>>, State}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportDelta)
     when X >= MinX andalso X =< MaxX andalso Y >= MinY andalso Y =< MaxY ->
         {X1, Y1} = translate(to_client, {X, Y}),
         [{X1, Y1, State} | ViewportDelta];
@@ -192,11 +198,11 @@ execute_actions(WorldTabId, LookupTabId, Viewport) ->
               end,
         ets:foldl(Fun, [], LookupTabId).
 
-exec_action({Key, die, _, _}, TabId) ->
+exec_action({Key, die}, TabId) ->
         ets:delete(TabId, Key),
         ok;
 
-exec_action({Key, arise, _, _}, TabId) ->
+exec_action({Key, arise}, TabId) ->
         ets:insert(TabId, {Key, alive}),
         ok.
 

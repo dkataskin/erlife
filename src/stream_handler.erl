@@ -12,7 +12,7 @@
 
 init(_Transport, Req, _Opts, _Active) ->
         {SessionId, Req1} = cowboy_req:cookie(?session_id_cookie, Req),
-        {ok, _Pid} = start_engine(SessionId, InitialState),
+        {ok, _Pid} = start_engine(SessionId),
         erlang:send_after(100, self(), list_saved_states),
         {ok, Req1, #stream_state{ sessionId = SessionId }}.
 
@@ -58,16 +58,20 @@ execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ s
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
 
-execute_command(<<"start">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-        io:format("user commanded: start; data:~p~n", [Data]),
-        InitialState = erlife_protocol:parse_initial_input(Data),
-        {ok, _Pid} = start_engine(SessionId, InitialState),
-        {ok, Req, State};
+%execute_command(<<"start">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
+%        io:format("user commanded: start; data:~p~n", [Data]),
+%        InitialState = erlife_protocol:parse_initial_input(Data),
+%        {ok, _Pid} = start_engine(SessionId, InitialState),
+%        {ok, Req, State};
 
-execute_command(<<"stop">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
-        io:format("user commanded: stop~n"),
-        ok = stop_engine(SessionId),
-        {ok, Req, State};
+execute_command(<<"clear">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
+        io:format("user commanded: clear~n"),
+        Fun = fun(Pid) ->
+                {ok, cleared} = erlife_engine:clear(Pid),
+                {ok, no_reply}
+        end,
+        Resp = execute_on_server(SessionId, Fun),
+        reply(Resp, Req, State);
 
 execute_command(<<"save">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
         Name = erlife_protocol:parse_save_input(Data),
@@ -109,16 +113,14 @@ reply({ok, no_reply}, Req, State) ->
 reply(Response, Req, State) ->
         {reply, Response, Req, State}.
 
-start_engine(SessionId, InitialState) ->
-        ok = case gproc:lookup_local_name(SessionId) of
-              undefined ->
-                ok;
+start_engine(SessionId) ->
+        case gproc:lookup_local_name(SessionId) of
+          undefined ->
+            erlife_engine:start_link(SessionId);
 
-              ProcessPid ->
-                erlife_engine:stop(ProcessPid),
-                ok
-             end,
-        erlife_engine:start_link(SessionId, InitialState).
+            ProcessPid ->
+              {ok, ProcessPid}
+        end.
 
 stop_engine(SessionId) ->
         case gproc:lookup_local_name(SessionId) of
