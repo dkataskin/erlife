@@ -23,8 +23,8 @@
 -type celldelta() :: {cellkey(), cellaction()}.
 
 % api
-start_link(InitialState) ->
-        gen_server:start_link(?MODULE, [InitialState], []).
+start_link(Id, InitialState) ->
+        gen_server:start_link(?MODULE, [Id, InitialState], []).
 
 stop(Pid) ->
         gen_server:call(Pid, stop).
@@ -42,9 +42,10 @@ print(Pid) ->
 
 % gen_server callbacks
 -spec init(InitialState::[point()]) -> {ok, pid()}.
-init([InitialState]) ->
+init([Id, InitialState]) ->
         ets:new(?node_table, [set, {keypos, 1}, {read_concurrency, true}, named_table]),
         fill_initial(InitialState),
+        gproc:add_local_name(Id),
         {ok, #state{ gen = 0 }}.
 
 handle_call(print, _From, State) ->
