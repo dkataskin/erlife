@@ -57,7 +57,6 @@
             erlife.init({ address: 'ws://localhost:8085/erlife', canvas: canvas, context: context });
 
             $("#buttonRun").click(function(){
-                console.log("click, is running" + erlife.isRunning);
                 if (erlife.isRunning){
                     erlife.stop();
                     $("#buttonRun").attr('value', 'Run');
