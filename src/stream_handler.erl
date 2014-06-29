@@ -3,8 +3,7 @@
 
 -include("erlife.hrl").
 
--record(stream_state, { running = false,
-                        sessionId = undefined }).
+-record(stream_state, { sessionId = undefined }).
 
 -export([init/4]).
 -export([stream/3]).
@@ -61,6 +60,17 @@ execute_command(<<"stop">>, _, Req, State=#stream_state{ sessionId = SessionId }
         io:format("user commanded: stop~n"),
         ok = stop_engine(SessionId),
         {ok, Req, State};
+
+execute_command(<<"save">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
+        Name = erlife_protocol:parse_save_input(Data),
+        Fun = fun(Pid) ->
+                {dumped, TabId} = erlife_engine:dump_state(Pid),
+                {saved, _Id} = erlife_store:save(Name, TabId),
+                {ok, DumpList} = erlife_store:list(),
+                erlife_protocol:dump_list_to_json(DumpList)
+              end,
+        Resp = execute_on_server(SessionId, Fun),
+        reply(Resp, Req, State);
 
 execute_command(Command, _, Req, State) ->
         io:format("unknown command ~p received ~n", [Command]),
