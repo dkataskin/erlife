@@ -326,6 +326,8 @@
             this.isRunning = false;
             this.server.clear();
             this.canvas.clear();
+
+            this.onUpdate(0, 0);
         },
 
         update: function(changes){

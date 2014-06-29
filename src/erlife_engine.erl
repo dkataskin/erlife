@@ -110,7 +110,8 @@ handle_call({restore_from_dump, DumpTabId}, _From, #state { tab_id = TabId }) ->
 
 handle_call(clear, _From, State=#state { tab_id = TabId }) ->
         true = ets:delete_all_objects(TabId),
-        {reply, {ok, cleared}, State};
+        NewState = State#state { gen = 0 },
+        {reply, {ok, cleared}, NewState};
 
 handle_call(stop, _From, State) ->
         {stop, normal, ok, State};
