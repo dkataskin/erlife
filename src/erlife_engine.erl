@@ -7,7 +7,7 @@
 -define(center, trunc(math:pow(2, 64) / 2)).
 
 %% API
--export([start_link/1]).
+-export([start_link/1, stop/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -25,6 +25,9 @@
 % api
 start_link(InitialState) ->
         gen_server:start_link(?MODULE, [InitialState], []).
+
+stop(Pid) ->
+        gen_server:call(Pid, stop).
 
 -spec next_gen(Pid::pid(), Viewport::viewport()) -> {GenNum::integer(), CellDelta::[celldelta()]}.
 next_gen(Pid, Viewport) ->
@@ -64,6 +67,9 @@ handle_call({next_gen, {Min, Max}, Options}, _From, State=#state{ gen = Gen }) -
 
         NewState = State#state { gen = Gen + 1 },
         {reply, {ok, {NewState#state.gen, Resp}}, NewState};
+
+handle_call(stop, _From, State) ->
+        {stop, normal, ok, State};
 
 handle_call(_Request, _From, State) ->
         {reply, ok, State}.

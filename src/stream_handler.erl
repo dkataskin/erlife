@@ -34,7 +34,7 @@ info(Info, Req, State) ->
         io:format("info received ~p~n", [Info]),
         {ok, Req, State}.
 
-terminate(_Req, _State) ->
+terminate(_Req, State=#stream_state{ pid = Pid }) ->
         io:format("erlife handler terminate~n"),
         ok.
 
@@ -46,9 +46,12 @@ execute_command(<<"nextGen">>, _, Req, State=#stream_state{ pid = Pid }) ->
         {ok, GenNum, Delta} = erlife_engine:next_gen(Pid),
         {reply, get_delta_json(GenNum, Delta), Req, State};
 
-execute_command(<<"start">>, Data, Req, State=#stream_state{}) ->
+execute_command(<<"start">>, Data, Req, State=#stream_state{ pid = Pid }) ->
         io:format("user commanded: start; data:~p~n", [Data]),
-        {ok, Req, State};
+
+        {ok, Pid1} = start_engine(Data, Pid),
+        NewState = State#stream_state { pid = Pid1 },
+        {ok, Req, NewState};
 
 execute_command(<<"stop">>, _, Req, State) ->
         io:format("user commanded: stop~n"),
@@ -72,3 +75,35 @@ compact_delta(Delta) ->
               end,
         lists:map(Fun, Delta).
 
+start_engine(InitialState, Pid) ->
+        EnginePid = case Pid of
+                      undefined ->
+                        {ok, Pid1} = erlife_engine:start_link(InitialState),
+                        Pid1;
+
+                      ProcessPid ->
+                        case is_process_alive(ProcessPid) of
+                          true ->
+                            ProcessPid;
+
+                          false ->
+                            {ok, Pid1} = erlife_engine:start_link(InitialState),
+                            Pid1
+                        end
+                    end,
+        erlang:link(EnginePid),
+        {ok, EnginePid}.
+
+stop_engine(Pid) ->
+        case Pid of
+          undefined ->
+            ok;
+
+          ProcessPid ->
+            case is_process_alive(ProcessPid) of
+              true ->
+                erlife_engine:stop(ProcessPid);
+              false ->
+                ok
+            end
+        end.
