@@ -11,7 +11,7 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([next_gen/3, next_gen/4, print/1]).
+-export([next_gen/3, next_gen/4]).
 -export([dump_state/1, restore_from_dump/2]).
 -export([clear/1, get_viewport/2]).
 -export([print/1]).
@@ -23,6 +23,7 @@
 -type viewport() :: {point(), point()}.
 -type cellaction() :: die | arise.
 -type celldelta() :: {cellkey(), cellaction()}.
+-type cellchange() :: {integer(), integer(), cellaction()}.
 
 % api
 start_link(Id) ->
@@ -31,7 +32,8 @@ start_link(Id) ->
 stop(Pid) ->
         gen_server:call(Pid, stop).
 
-%-spec next_gen(Pid::pid(), Viewport::viewport(), ChangesToState) -> {GenNum::integer(), CellDelta::[celldelta()]}.
+-spec next_gen(Pid::pid(), Viewport::viewport(), ChangesToState::[cellchange()]) ->
+            {GenNum::integer(), CellDelta::[celldelta()]}.
 next_gen(Pid, Viewport, ChangesToState) ->
         gen_server:call(Pid, {next_gen, Viewport, ChangesToState, []}).
 
@@ -70,7 +72,13 @@ handle_call(print, _From, State=#state { tab_id = TabId }) ->
 
 handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        ok = apply_changes_to_state(ChangesToState, TabId),
+        Fun = fun({X, Y, Action}) ->
+                X1 = translate(to_server, X),
+                Y1 = translate(to_server, Y),
+                {<<X1:64, Y1:64>>, Action}
+              end,
+        ChangesToState1 = lists:map(Fun, ChangesToState),
+        ok = apply_changes_to_state(ChangesToState1, TabId),
         {ok, Delta} = calc_next_gen(Viewport1, TabId),
 
         Resp = case proplists:lookup(invalidate, Options) of
@@ -118,21 +126,12 @@ terminate(_Reason, _State) ->
 code_change(_OldVsn, State, _Extra) ->
         {ok, State}.
 
-apply_changes_to_state(ChangesToState, TabId) ->
-        Fun = fun({X, Y, Action}) -> exec_action({<<X:64, Y:64>>, Action}, TabId) end,
-        lists:foreach(Fun, ChangesToState),
-        ok.
-
 calc_next_gen(Viewport, WorldTabId) ->
         LookupTabId = ets:new(lookup_table, [set, {keypos, 1}]),
         ok = traverse_cells(WorldTabId, LookupTabId),
 
-        ViewportDelta = execute_actions(WorldTabId, LookupTabId, Viewport),
+        ViewportDelta = apply_changes_to_state(WorldTabId, LookupTabId, Viewport),
         ets:delete(LookupTabId),
-
-        %lists:foreach(fun({X, Y, Action}) ->
-        %                io:format("~p {~p,~p}~n", [Action, X, Y])
-        %              end, ViewportDelta),
         {ok, ViewportDelta}.
 
 traverse_cells(WorldTabId, LookupTabId) ->
@@ -191,7 +190,12 @@ add_to_viewport({<<X:64, Y:64>>, State}, {{MinX, MinY}, {MaxX, MaxY}}, ViewportD
 add_to_viewport(_, _, ViewportDelta) ->
         ViewportDelta.
 
-execute_actions(WorldTabId, LookupTabId, Viewport) ->
+apply_changes_to_state(Changes, WorldTabId) ->
+        Fun = fun({Key, Action}) -> exec_action({Key, Action}, WorldTabId) end,
+        lists:foreach(Fun, Changes),
+        ok.
+
+apply_changes_to_state(WorldTabId, LookupTabId, Viewport) ->
         Fun = fun(Action, ViewportDelta) ->
                 ok = exec_action(Action, WorldTabId),
                 add_to_viewport(Action, Viewport, ViewportDelta)
@@ -268,8 +272,3 @@ translate(to_client, {X, Y}) ->
 
 to_point(<<X:64, Y:64>>) ->
         {X - ?center, Y - ?center}.
-
-to_key(X, Y) ->
-        X1 = X + ?center,
-        Y1 = Y + ?center,
-        <<X1:64, Y1:64>>.
