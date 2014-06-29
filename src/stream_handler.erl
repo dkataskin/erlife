@@ -24,8 +24,7 @@ stream(Data, Req, State) ->
         case jsx:is_json(Data) of
           true ->
             %io:format("stream received valid json ~s~n", [Data]),
-            Json = jsx:decode(Data),
-            execute_command(Json, Req, State);
+            execute_command(jsx:decode(Data), Req, State);
 
           false ->
             io:format("stream received something ~s~n", [Data]),
@@ -36,25 +35,28 @@ info(Info, Req, State) ->
         io:format("info received ~p~n", [Info]),
         {ok, Req, State}.
 
-terminate(_Req, State=#stream_state{ sessionId = SessionId }) ->
+terminate(_Req, #stream_state{ sessionId = SessionId }) ->
         io:format("erlife handler terminate~n"),
+        ok = stop_engine(SessionId),
         ok.
 
 execute_command([{<<"command">>, Command} | T], Req, State) ->
         execute_command(Command, T, Req, State).
 
-execute_command(<<"nextGen">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
-        io:format("user commanded: nextGen~n"),
+execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
+        io:format("user commanded: nextGen, data:~p~n", [Data]),
+        {ok, Viewport, Options} = get_nextgen_input(Data),
         Fun = fun(Pid) ->
-                {ok, GenNum, Delta} = erlife_engine:next_gen(Pid),
+                {ok, GenNum, Delta} = erlife_engine:next_gen(Pid, Viewport, Options),
                 get_delta_json(GenNum, Delta)
               end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
 
-execute_command(<<"start">>, Data, Req, State=#stream_state{ sessionId = SessionId }) ->
+execute_command(<<"start">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
         io:format("user commanded: start; data:~p~n", [Data]),
-        {ok, _Pid} = start_engine(Data, SessionId),
+        InitialState = erlife_protocol:parse_initial_input(Data),
+        {ok, _Pid} = start_engine(SessionId, InitialState),
         {ok, Req, State};
 
 execute_command(<<"stop">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
@@ -67,18 +69,19 @@ execute_command(Command, _, Req, State) ->
         {ok, Req, State}.
 
 get_delta_json(GenNum, Delta) ->
-        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, compact_delta(Delta)}]).
+        jsx:encode([{<<"gen">>, GenNum}, {<<"delta">>, erlang_protocol:prepare_delta(Delta)}]).
 
-compact_delta(Delta) ->
-        Fun = fun({Action, <<X:64, Y:64>>}) ->
-                case Action of
-                  die ->
-                    [false, X, Y];
-                  arise ->
-                    [true, X, Y]
-                end
-              end,
-        lists:map(Fun, Delta).
+get_nextgen_input([{<<"viewport">>, [MinX, MinY, MaxX, MaxY]}, {<<"invalidate">>, Invalidate}]) ->
+        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
+        case Invalidate of
+          true ->
+            {ok, Viewport, [invalidate]};
+          false ->
+            {ok, Viewport, []}
+        end;
+
+get_nextgen_input(_) ->
+        {ok, {{-50, -50}, {50, 50}}, []}.
 
 execute_on_server(SessionId, Fun) ->
         case gproc:lookup_local_name(SessionId) of

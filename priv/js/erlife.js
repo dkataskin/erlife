@@ -23,7 +23,7 @@
                 };
 
                 this.bullet.onmessage = function(e){
-                    //alert(e.data);
+                    console.log(e.data);
                 };
 
                 this.bullet.onheartbeat = function(){
@@ -32,11 +32,17 @@
             },
 
             start: function(userState){
-                this.bullet.send($.toJSON({ command: "start", state: userState }));
+                this.bullet.send($.toJSON({ command: "start", data: userState }));
             },
 
-            nextGen: function(){
-                this.bullet.send($.toJSON({ command: "nextGen" }));
+            nextGen: function(viewport, invalidate){
+                this.bullet.send($.toJSON({
+                                            command: "nextGen",
+                                            data: {
+                                                    viewport: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY],
+                                                    invalidate: invalidate
+                                                  }
+                                          }));
             },
 
             stop: function(){
@@ -210,6 +216,7 @@
             offsetY: 0,
             viewPortWidth: 100,
             viewPortHeight: 100,
+            invalidate: false,
 
             setOffset: function(offsetX, offsetY){
                 this.offsetX = offsetX;
@@ -218,10 +225,10 @@
 
             getView: function(){
                 return {
-                    minX: offsetX - (viewPortWidth / 2),
-                    maxX: offsetX + (viewPortWidth / 2),
-                    minY: offsetY - (viewPortHeight / 2),
-                    maxY: offsetY + (viewPortHeight / 2)
+                    minX: erlife.viewport.offsetX - (erlife.viewport.viewPortWidth / 2),
+                    maxX: erlife.viewport.offsetX + (erlife.viewport.viewPortWidth / 2),
+                    minY: erlife.viewport.offsetY - (erlife.viewport.viewPortHeight / 2),
+                    maxY: erlife.viewport.offsetY + (erlife.viewport.viewPortHeight / 2)
                 }
             }
         },
@@ -249,7 +256,8 @@
                     this.start();
                 }
 
-                this.server.nextGen();
+                var viewport = this.viewport.getView();
+                this.server.nextGen(viewport, this.viewport.invalidate);
             }
         },
 
