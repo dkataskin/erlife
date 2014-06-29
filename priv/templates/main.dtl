@@ -42,7 +42,7 @@
         <div class="subtitle">Load</div>
         <form>
             <select id="selectSavedStates" width="150" />
-            <input id="textLoadedStateName" type="text" value="" width="150" disabled />
+            <input id="textLoadedStateName" type="text" value="" width="150" />
             <input type="button" id="buttonLoad" value="Load"/>
             <input type="button" id="buttonOverwrite" value="Overwrite" />
             <span id="layoutMessages"></span>
@@ -98,12 +98,24 @@
             });
 
             $("#buttonSave").click(function(){
-                var name = $("textName").val();
+                var name = $("#textName").val();
                 if (!name){
                     alert("Would be good to assign some name.");
                 }
                 else {
-                    erlife.saveState(name);
+                    erlife.saveState(null, name);
+                    $("#textName").val("");
+                }
+            });
+
+            $("#buttonOverwrite").click(function(){
+                var id = $("#selectSavedStates").val();
+                var name = $("#textLoadedStateName").val();
+                if (!name){
+                    alert("Would be good to assign some name.");
+                }
+                else {
+                    erlife.saveState(id, name);
                 }
             });
 

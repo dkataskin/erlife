@@ -40,7 +40,7 @@
                             } else if (event.event == "savedstates"){
                                 var data = event.data;
                                 erlife.onSavedStatesListLoaded(data);
-                                console.log("saved states loaded " + data);
+                                console.log("saved states loaded " + e.data);
                             }
                         }
                     }
@@ -64,9 +64,10 @@
                 this.bullet.send($.toJSON({ command: "clear" }));
             },
 
-            saveState: function(name, changes){
+            saveState: function(id, name, changes){
                 this.bullet.send($.toJSON({ command: "save",
-                                            data: { name: name,
+                                            data: { id: id,
+                                                    name: name,
                                                     statechanges: changes,
                                             }}));
             },
@@ -336,10 +337,10 @@
             this.server.nextGen(viewport, changes, this.viewport.invalidate);
         },
 
-        saveState: function(name){
+        saveState: function(id, name){
             var changesToState = this.canvas.userState.getState();
             this.canvas.userState.clear();
-            this.server.saveState(name, changesToState);
+            this.server.saveState(id, name, changesToState);
         },
 
         loadState: function(id){

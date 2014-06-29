@@ -68,11 +68,18 @@ execute_command(<<"clear">>, _, Req, State=#stream_state{ sessionId = SessionId 
         reply(Resp, Req, State);
 
 execute_command(<<"save">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-        {Name, ChangesToState} = erlife_protocol:parse_save_input(Data),
+        {Id, Name, ChangesToState} = erlife_protocol:parse_save_input(Data),
         Fun = fun(Pid) ->
                 {ok, applied} = erlife_engine:apply_changes(Pid, ChangesToState),
                 {dumped, TabId} = erlife_engine:dump_state(Pid),
-                {saved, _Id} = erlife_store:save(Name, TabId),
+                case Id of
+                  undefined ->
+                    {saved, _Id} = erlife_store:save(Name, TabId),
+                    ok;
+                  Id ->
+                    {updated, _Id} = erlife_store:update(Id, Name, TabId),
+                    ok
+                end,
                 {ok, DumpList} = erlife_store:list(),
                 erlife_protocol:dump_list_to_json(DumpList)
               end,
