@@ -108,7 +108,9 @@
             emptyCellColor: '#F3F3F3',
             invalidateCellColor: '#B25ED3',
             mousedown: false,
-            dragging: false,
+            lastX: -1,
+            lastY: -1,
+            //dragging: false,
             state: null,
             userState: {
                 array: [],
@@ -269,22 +271,25 @@
 
             onmousedown: function(e){
                 erlife.canvas.mousedown = true;
+                var pos = erlife.canvas.mousePosition(e);
+                erlife.canvas.userState.set(pos.x, pos.y);
+                erlife.canvas.lastX = pos.x;
+                erlife.canvas.lastY = pos.y;
             },
 
             onmousemove: function(e){
-                if (erlife.canvas.mousedown && !erlife.canvas.dragging){
-                    erlife.canvas.dragging = true;
+                if (erlife.canvas.mousedown){
+                    var pos = erlife.canvas.mousePosition(e);
+                    if (pos.x != erlife.canvas.lastX || pos.y != erlife.canvas.lastY){
+                        erlife.canvas.userState.set(pos.x, pos.y);
+                        erlife.canvas.lastX = pos.x;
+                        erlife.canvas.lastY = pos.y;
+                    }
                 }
             },
 
             onmouseup: function(e){
                 erlife.canvas.mousedown = false;
-                if (erlife.canvas.dragging){
-                    erlife.canvas.dragging = false;
-                } else {
-                    var position = erlife.canvas.mousePosition(e);
-                    erlife.canvas.userState.set(position.x, position.y);
-                }
             }
         },
 

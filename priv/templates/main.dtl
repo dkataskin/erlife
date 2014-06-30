@@ -35,6 +35,11 @@
             <input type="button" value="Run" id="buttonRun" />
             <input type="button" value="Step" id="buttonStep" />
             <input type="button" value="Clear" id="buttonClear" />
+
+            <input type="button" value="Left" id="buttonLeft" />
+            <input type="button" value="Up" id="buttonUp" />
+            <input type="button" value="Down" id="buttonDown" />
+            <input type="button" value="Right" id="buttonRight" />
         </form>
     </div>
 
