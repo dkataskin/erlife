@@ -39,7 +39,6 @@
                                 erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
                             } else if (event.event == "savedstates"){
                                 erlife.onSavedStatesListLoaded(data);
-                                console.log("saved states loaded " + e.data);
                             } else if (event.event == "viewport"){
                                 erlife.eventHandlers.onViewport(data);
                             }
@@ -125,7 +124,6 @@
             mousedown: false,
             lastX: -1,
             lastY: -1,
-            //dragging: false,
             state: null,
             userState: {
                 array: [],
@@ -162,8 +160,11 @@
                     var result = new Array();
                     for(var i = 0; i < this.array.length; i++){
                         var node = this.array[i];
-                        result.push(node.x - erlife.canvas.offsetX + 1);
-                        result.push(node.y - erlife.canvas.offsetY + 1);
+                        var x = node.x - erlife.canvas.offsetX + 1;
+                        var y = node.y - erlife.canvas.offsetY + 1;
+                        var point = erlife.viewport.translateToServer(x, y);
+                        result.push(point[0]);
+                        result.push(point[1]);
                         result.push(node.action);
                     }
 
@@ -226,8 +227,12 @@
             applyDelta: function(delta){
                 var self = this;
                 delta.forEach(function(array) {
-                    var x = array[1] + self.offsetX - 1 - erlife.viewport.offsetX;
-                    var y = array[2] + self.offsetY - 1 - erlife.viewport.offsetY;
+                    var x = array[1] + self.offsetX - 1;
+                    var y = array[2] + self.offsetY - 1;
+
+                    var point = erlife.viewport.translateToClient(x, y);
+                    x = point[0];
+                    y = point[1];
                     self.drawCell(x, y, array[0]);
                     self.state[x][y] = array[0];
                 });
@@ -340,12 +345,20 @@
                 }
             },
 
+            translateToServer: function(x, y){
+                return [x + this.offsetX, y + this.offsetY]
+            },
+
+            translateToClient: function(x, y){
+                return [x - this.offsetX, y - this.offsetY]
+            },
+
             getView: function(){
                 return {
-                    minX: erlife.viewport.offsetX - (erlife.viewport.viewPortWidth / 2),
-                    maxX: erlife.viewport.offsetX + (erlife.viewport.viewPortWidth / 2),
-                    minY: erlife.viewport.offsetY - (erlife.viewport.viewPortHeight / 2),
-                    maxY: erlife.viewport.offsetY + (erlife.viewport.viewPortHeight / 2)
+                    minX: this.offsetX - (this.viewPortWidth / 2),
+                    maxX: this.offsetX + (this.viewPortWidth / 2),
+                    minY: this.offsetY - (this.viewPortHeight / 2),
+                    maxY: this.offsetY + (this.viewPortHeight / 2)
                 }
             }
         },
