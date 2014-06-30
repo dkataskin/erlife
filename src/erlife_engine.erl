@@ -14,7 +14,6 @@
 -export([next_gen/3, next_gen/4]).
 -export([dump_state/1, restore_from_dump/2]).
 -export([apply_changes/2, clear/1, get_viewport/2]).
--export([print/1]).
 
 -record(state, { gen = 0, tab_id = undefined }).
 
@@ -55,23 +54,12 @@ dump_state(Pid) ->
 restore_from_dump(Pid, DumpTabId) ->
         gen_server:call(Pid, {restore_from_dump, DumpTabId}).
 
--spec print(Pid::pid()) -> ok.
-print(Pid) ->
-        gen_server:call(Pid, print).
-
 % gen_server callbacks
 -spec init(InitialState::[point()]) -> {ok, pid()}.
 init([Id]) ->
         TabId = ets:new(node_table, [set, {keypos, 1}]),
         gproc:add_local_name(Id),
         {ok, #state{ gen = 0, tab_id = TabId }}.
-
-handle_call(print, _From, State=#state { tab_id = TabId }) ->
-        ets:foldl(fun({Key, _}, []) ->
-                      {X, Y} = to_point(Key),
-                      io:format("X:~p Y:~p~n", [X, Y]), []
-                  end, [], TabId),
-        {reply, ok, State};
 
 handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
