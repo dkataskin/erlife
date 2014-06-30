@@ -36,10 +36,10 @@
             <input type="button" value="Step" id="buttonStep" />
             <input type="button" value="Clear" id="buttonClear" />
 
-            <input type="button" value="Left" id="buttonLeft" />
-            <input type="button" value="Up" id="buttonUp" />
-            <input type="button" value="Down" id="buttonDown" />
-            <input type="button" value="Right" id="buttonRight" />
+            <input type="button" value="&#x25c0;" id="buttonLeft" style="margin-left:50px" />
+            <input type="button" value="&#x25b2;" id="buttonUp" />
+            <input type="button" value="&#x25bc;" id="buttonDown" />
+            <input type="button" value="&#x25b6;" id="buttonRight" />
         </form>
     </div>
 

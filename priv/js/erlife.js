@@ -162,7 +162,8 @@
                 this.canvas.onmousedown = this.onmousedown;
                 this.canvas.onmouseup = this.onmouseup;
                 this.canvas.onmousemove = this.onmousemove;
-
+                this.canvas.onselectstart = function () { return false; };
+                
                 this.state = new Array();
                 for(var i = 0; i < this.cols; i++){
                     var row = new Array();
