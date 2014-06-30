@@ -13,7 +13,7 @@
 
 -export([next_gen/3, next_gen/4]).
 -export([dump_state/1, restore_from_dump/2]).
--export([apply_changes/2, clear/1, get_viewport/2]).
+-export([apply_changes/2, clear/1, get_viewport/2, live_count/1]).
 
 -record(state, { gen = 0,
                  liveCount = 0,
@@ -56,6 +56,10 @@ clear(Pid) ->
 get_viewport(Pid, Viewport) ->
         gen_server:call(Pid, {get_viewport, Viewport}).
 
+-spec live_count(Pid::pid()) -> {ok, non_neg_integer()}.
+live_count(Pid) ->
+        gen_server:call(Pid, live_count).
+
 -spec dump_state(Pid::pid()) -> {dumped, ets:tid()}.
 dump_state(Pid) ->
         gen_server:call(Pid, dump_state).
@@ -74,9 +78,8 @@ init([Id]) ->
 handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
         Actions = changes_to_action_list(ChangesToState),
-        ok = apply_changes_to_state(Actions, TabId),
-        {ok, Delta} = calc_next_gen(Viewport1, TabId),
-
+        {ok, _} = apply_changes_to_state(Actions, TabId),
+        {ok, {Delta, Count}} = calc_next_gen(Viewport1, TabId),
         Resp = case proplists:lookup(invalidate, Options) of
                  {invalidate, true} ->
                    invalidate_viewport(Viewport1, TabId);
@@ -84,13 +87,14 @@ handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state
                    Delta
                end,
 
-        NewState = State#state { gen = Gen + 1 },
-        {reply, {ok, {NewState#state.gen, Resp}}, NewState};
+        NewState = State#state { gen = Gen + 1, liveCount = Count },
+        {reply, {ok, {NewState#state.gen, NewState#state.liveCount, Resp}}, NewState};
 
-handle_call({apply_changes, ChangesToState}, _From, State=#state { tab_id = TabId }) ->
+handle_call({apply_changes, ChangesToState}, _From, State=#state { tab_id = TabId, liveCount = Count }) ->
         Actions = changes_to_action_list(ChangesToState),
-        ok = apply_changes_to_state(Actions, TabId),
-        {reply, {ok, applied}, State};
+        {ok, {_, CountChange}} = apply_changes_to_state(Actions, TabId),
+        NewState = State#state { liveCount = Count + CountChange },
+        {reply, {ok, applied}, NewState};
 
 handle_call({get_viewport, {Min, Max}}, _From, State=#state { tab_id = TabId }) ->
         Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
@@ -100,14 +104,19 @@ handle_call({get_viewport, {Min, Max}}, _From, State=#state { tab_id = TabId }) 
 handle_call(dump_state, _From, State=#state { tab_id = TabId }) ->
         {reply, {dumped, TabId}, State};
 
+handle_call(live_count, _From, State=#state { liveCount = Count }) ->
+        {reply, {ok, Count}, State};
+
 handle_call({restore_from_dump, DumpTabId}, _From, #state { tab_id = TabId }) ->
         true = ets:delete(TabId),
-        NewState = #state { gen = 0, tab_id = DumpTabId },
+        LiveCount = ets:foldl(fun(_, Count) -> Count + 1 end, 0, DumpTabId),
+        NewState = #state { gen = 0, tab_id = DumpTabId, liveCount = LiveCount },
+
         {reply, {ok, restored}, NewState};
 
 handle_call(clear, _From, State=#state { tab_id = TabId }) ->
         true = ets:delete_all_objects(TabId),
-        NewState = State#state { gen = 0 },
+        NewState = State#state { gen = 0, liveCount = 0 },
         {reply, {ok, cleared}, NewState};
 
 handle_call(stop, _From, State) ->
@@ -130,19 +139,18 @@ code_change(_OldVsn, State, _Extra) ->
 
 calc_next_gen(Viewport, WorldTabId) ->
         LookupTabId = ets:new(lookup_table, [set, {keypos, 1}]),
-        ok = traverse_cells(WorldTabId, LookupTabId),
-
-        ViewportDelta = apply_changes_to_state(WorldTabId, LookupTabId, Viewport),
+        {ok, LiveCount} = traverse_cells(WorldTabId, LookupTabId),
+        {ok, {ViewportDelta, CountChange}} = apply_changes_to_state(WorldTabId, LookupTabId, Viewport),
         ets:delete(LookupTabId),
-        {ok, ViewportDelta}.
+        {ok, {ViewportDelta, LiveCount + CountChange}}.
 
 traverse_cells(WorldTabId, LookupTabId) ->
-        Fun = fun(Cell, Acc) ->
+        Fun = fun(Cell, LiveCount) ->
                 traverse_cell(Cell, WorldTabId, LookupTabId),
-                Acc
+                LiveCount + 1
               end,
-        ets:foldl(Fun, [], WorldTabId),
-        ok.
+        LiveCount = ets:foldl(Fun, 0, WorldTabId),
+        {ok, LiveCount}.
 
 traverse_cell(Cell={Key, alive}, WorldTabId, LookupTabId) ->
         Neig = get_neig(Key, WorldTabId),
@@ -205,24 +213,32 @@ changes_to_action_list(ChangesToState) ->
         lists:map(Fun, ChangesToState).
 
 apply_changes_to_state(Actions, WorldTabId) ->
-        Fun = fun({Key, Action}) -> exec_action({Key, Action}, WorldTabId) end,
-        lists:foreach(Fun, Actions),
-        ok.
+        Fun = fun(Action, Count) -> exec_action(Action, Count, WorldTabId) end,
+        CountChange = lists:foldl(Fun, 0, Actions),
+        {ok, {[], CountChange}}.
 
 apply_changes_to_state(WorldTabId, LookupTabId, Viewport) ->
-        Fun = fun(Action, ViewportDelta) ->
-                ok = exec_action(Action, WorldTabId),
-                add_to_viewport(Action, Viewport, ViewportDelta)
+        Fun = fun(Action, {ViewportDelta, Count}) ->
+                Count1 = exec_action(Action, Count, WorldTabId),
+                ViewPortDelta1 = add_to_viewport(Action, Viewport, ViewportDelta),
+                {ViewPortDelta1, Count1}
               end,
-        ets:foldl(Fun, [], LookupTabId).
+        Acc = ets:foldl(Fun, {[], 0}, LookupTabId),
+        {ok, Acc}.
+
+exec_action(Action, Count, WorldTabId) ->
+        case exec_action(Action, WorldTabId) of
+          {ok, died} -> Count - 1;
+          {ok, born} -> Count + 1
+        end.
 
 exec_action({Key, die}, TabId) ->
         ets:delete(TabId, Key),
-        ok;
+        {ok, died};
 
 exec_action({Key, arise}, TabId) ->
         ets:insert(TabId, {Key, alive}),
-        ok.
+        {ok, born}.
 
 alive_count(Cells) ->
         Fun = fun({_, alive}, Sum) -> Sum + 1;

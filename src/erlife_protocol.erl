@@ -9,7 +9,7 @@
 
 %% API
 -export([parse_nextgen_input/1, parse_save_input/1, parse_load_input/1, parse_viewport/1]).
--export([dump_list_to_json/1, gen_delta_to_json/2, viewport_to_json/1]).
+-export([dump_list_to_json/1, gen_delta_to_json/3, viewport_to_json/1]).
 
 parse_nextgen_input([{?viewport_prop, ViewportJson},
                      {?state_changes_prop, StateChanges},
@@ -62,10 +62,10 @@ dump_list_to_json(Dumps) ->
         jsx:encode([{<<"event">>, <<"savedstates">>},
                     {<<"data">>, DumpList}]).
 
-gen_delta_to_json(GenNum, Delta) ->
+gen_delta_to_json(GenNum, LiveCount, Delta) ->
         jsx:encode([{<<"event">>, <<"nextGen">>},
                     {<<"data">>, [{<<"num">>, GenNum},
-                                  {<<"nodeCount">>, 0},
+                                  {<<"nodeCount">>, LiveCount},
                                   {<<"delta">>, prepare_delta(Delta)}]}]).
 
 viewport_to_json(ViewportData) ->

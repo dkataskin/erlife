@@ -132,17 +132,25 @@
             $("#buttonOverwrite").click(function(){
                 var id = $("#selectSavedStates").val();
                 var name = $("#textLoadedStateName").val();
-                if (!name){
+                if (id && !name){
                     alert("Would be good to assign some name.");
+                    valid = false;
                 }
                 else {
-                    erlife.saveState(id, name);
+                    if (id){
+                        erlife.saveState(id, name);
+                    }
                 }
             });
 
             $("#buttonLoad").click(function(){
                 var id = $("#selectSavedStates option:selected").val();
-                erlife.loadState(id);
+                if (!id){
+                    alert("Please select a saved state from dropdown on the left.");
+                }
+                else {
+                    erlife.loadState(id);
+                }
             });
 
 

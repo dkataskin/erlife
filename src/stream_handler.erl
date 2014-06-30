@@ -50,8 +50,8 @@ execute_command([{<<"command">>, Command} | T], Req, State) ->
 execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
         {ok, Viewport, StateChanges, Options} = erlife_protocol:parse_nextgen_input(Data),
         Fun = fun(Pid) ->
-                {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, StateChanges, Options),
-                erlife_protocol:gen_delta_to_json(GenNum, Delta)
+                {ok, {GenNum, LiveCount, Delta}} = erlife_engine:next_gen(Pid, Viewport, StateChanges, Options),
+                erlife_protocol:gen_delta_to_json(GenNum, LiveCount, Delta)
               end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
@@ -99,7 +99,8 @@ execute_command(<<"load">>, [{<<"data">>, Data}], Req, State=#stream_state{ sess
                 {loaded, TabId} = erlife_store:load(Id, Pid),
                 {ok, restored} = erlife_engine:restore_from_dump(Pid, TabId),
                 {ok, ViewportData} = erlife_engine:get_viewport(Pid, Viewport),
-                erlife_protocol:gen_delta_to_json(0, ViewportData)
+                {ok, LiveCount} = erlife_engine:live_count(Pid),
+                erlife_protocol:gen_delta_to_json(0, LiveCount, ViewportData)
               end,
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
