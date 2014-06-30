@@ -15,7 +15,10 @@
 -export([dump_state/1, restore_from_dump/2]).
 -export([apply_changes/2, clear/1, get_viewport/2]).
 
--record(state, { gen = 0, tab_id = undefined }).
+-record(state, { gen = 0,
+                 liveCount = 0,
+                 genTime = 0,
+                 tab_id = undefined }).
 
 -type cellkey() :: binary().
 -type point() :: {integer(), integer()}.
@@ -23,6 +26,8 @@
 -type cellaction() :: die | arise.
 -type celldelta() :: {cellkey(), cellaction()}.
 -type cellchange() :: {integer(), integer(), cellaction()}.
+-type viewportdata() :: [celldelta()].
+-type gendata() :: {non_neg_integer(), viewportdata()}.
 
 % api
 start_link(Id) ->
@@ -32,30 +37,35 @@ stop(Pid) ->
         gen_server:call(Pid, stop).
 
 -spec next_gen(Pid::pid(), Viewport::viewport(), ChangesToState::[cellchange()]) ->
-            {GenNum::integer(), CellDelta::[celldelta()]}.
+            {ok, gendata()}.
 next_gen(Pid, Viewport, ChangesToState) ->
         gen_server:call(Pid, {next_gen, Viewport, ChangesToState, []}).
 
 next_gen(Pid, Viewport, ChangesToState, Options) ->
         gen_server:call(Pid, {next_gen, Viewport, ChangesToState, Options}).
 
+-spec apply_changes(Pid::pid(), ChangesToState::[cellchange()]) -> {ok, applied}.
 apply_changes(Pid, ChangesToState) ->
         gen_server:call(Pid, {apply_changes, ChangesToState}).
 
+-spec clear(Pid::pid()) -> {ok, cleared}.
 clear(Pid) ->
         gen_server:call(Pid, clear).
 
+-spec get_viewport(Pid::pid(), Viewport::viewport()) -> {ok, viewportdata()}.
 get_viewport(Pid, Viewport) ->
         gen_server:call(Pid, {get_viewport, Viewport}).
 
+-spec dump_state(Pid::pid()) -> {dumped, ets:tid()}.
 dump_state(Pid) ->
         gen_server:call(Pid, dump_state).
 
+-spec restore_from_dump(Pid::pid(), DumpTabId::ets:tid()) -> {ok, restored}.
 restore_from_dump(Pid, DumpTabId) ->
         gen_server:call(Pid, {restore_from_dump, DumpTabId}).
 
 % gen_server callbacks
--spec init(InitialState::[point()]) -> {ok, pid()}.
+-spec init(Id::binary()) -> {ok, pid()}.
 init([Id]) ->
         TabId = ets:new(node_table, [set, {keypos, 1}]),
         gproc:add_local_name(Id),
