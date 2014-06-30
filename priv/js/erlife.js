@@ -237,7 +237,10 @@
                     x = point[0];
                     y = point[1];
                     self.drawCell(x, y, array[0]);
-                    self.state[x][y] = array[0];
+
+                    if (x >= 0 && x < self.cols && y >= 0 && y < self.rows){
+                        self.state[x][y] = array[0];
+                    }
                 });
 
                 for(i = 0; i++; i < delta.length){
