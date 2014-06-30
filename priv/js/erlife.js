@@ -82,7 +82,7 @@
 
         eventHandlers: {
             onNextGen: function(genNum, nodeCount, delta){
-                erlife.canvas.drawDelta(delta);
+                erlife.canvas.applyDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
 
                 setTimeout(function() {
@@ -99,22 +99,30 @@
             height: 500,
             cols: 99,
             rows: 99,
-            offsetX: 45,
-            offsetY: 45,
+            offsetX: 49,
+            offsetY: 49,
             cellSize: 8,
             cellSpace: 1,
             backgroundColor: '#B5B8B4',
             liveCellColor: '#28D18D',
             emptyCellColor: '#F3F3F3',
+            invalidateCellColor: '#B25ED3',
             mousedown: false,
             dragging: false,
+            state: null,
             userState: {
                 array: [],
 
                 set: function(x, y){
+                    var cellValue = erlife.canvas.state[x][y];
+                    cellValue = !cellValue;
+                    erlife.canvas.state[x][y] = cellValue;
+
+                    erlife.canvas.drawCell(x, y, cellValue);
+
                     var exists = false;
                     var index = 0;
-                    for(i = 0; i < this.array.length; i++){
+                    for(var i = 0; i < this.array.length; i++){
                         if (this.array[i].x == x && this.array[i].y == y){
                             exists = true;
                             index = i;
@@ -125,11 +133,8 @@
                     if (exists){
                         this.array.pop(index);
                     }
-                    else {
-                        this.array.push({x: x, y: y});
-                    }
 
-                    return !exists;
+                    this.array.push({action: cellValue, x: x, y: y});
                 },
 
                 clear: function(){
@@ -142,7 +147,7 @@
                         var node = this.array[i];
                         result.push(node.x - erlife.canvas.offsetX + 1);
                         result.push(node.y - erlife.canvas.offsetY + 1);
-                        result.push(true);
+                        result.push(node.action);
                     }
 
                     return result;
@@ -155,6 +160,16 @@
                 this.canvas.onmousedown = this.onmousedown;
                 this.canvas.onmouseup = this.onmouseup;
                 this.canvas.onmousemove = this.onmousemove;
+
+                this.state = new Array();
+                for(var i = 0; i < this.cols; i++){
+                    var row = new Array();
+                    for(var j = 0; j < this.rows; j++){
+                        row.push(false);
+                    }
+
+                    this.state.push(row);
+                };
 
                 this.draw();
             },
@@ -184,12 +199,13 @@
                 }
             },
 
-            drawDelta: function(delta){
+            applyDelta: function(delta){
                 var self = this;
                 delta.forEach(function(array) {
                     var x = array[1] + self.offsetX - 1;
                     var y = array[2] + self.offsetY - 1;
                     self.drawCell(x, y, array[0]);
+                    self.state[x][y] = array[0];
                 });
 
                 for(i = 0; i++; i < delta.length){
@@ -267,12 +283,7 @@
                     erlife.canvas.dragging = false;
                 } else {
                     var position = erlife.canvas.mousePosition(e);
-                    if (erlife.canvas.userState.set(position.x, position.y)){
-                        erlife.canvas.drawCell(position.x, position.y, true);
-                    }
-                    else{
-                        erlife.canvas.drawCell(position.x, position.y, false);
-                    }
+                    erlife.canvas.userState.set(position.x, position.y);
                 }
             }
         },
