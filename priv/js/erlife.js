@@ -99,7 +99,6 @@
             },
 
             onViewport: function(viewportData){
-                console.log("refresh viewport");
                 erlife.viewport.invalidate = false;
                 erlife.canvas.clear();
                 erlife.canvas.applyDelta(viewportData);
@@ -111,10 +110,10 @@
             canvas: null,
             width: 900,
             height: 500,
-            cols: 99,
-            rows: 99,
-            offsetX: 49,
-            offsetY: 49,
+            cols: 100,
+            rows: 100,
+            offsetX: 50,
+            offsetY: 50,
             cellSize: 8,
             cellSpace: 1,
             backgroundColor: '#B5B8B4',
@@ -160,8 +159,8 @@
                     var result = new Array();
                     for(var i = 0; i < this.array.length; i++){
                         var node = this.array[i];
-                        var x = node.x - erlife.canvas.offsetX + 1;
-                        var y = node.y - erlife.canvas.offsetY + 1;
+                        var x = node.x - erlife.canvas.offsetX;
+                        var y = node.y - erlife.canvas.offsetY;
                         var point = erlife.viewport.translateToServer(x, y);
                         result.push(point[0]);
                         result.push(point[1]);
@@ -214,7 +213,6 @@
 
                 // Fill background
                 this.context.fillStyle = this.backgroundColor;
-                console.log(this.context.fillStyle);
                 this.context.fillRect(0, 0, this.width, this.height);
 
                 for (i = 0; i < this.cols; i++) {
@@ -227,8 +225,8 @@
             applyDelta: function(delta){
                 var self = this;
                 delta.forEach(function(array) {
-                    var x = array[1] + self.offsetX - 1;
-                    var y = array[2] + self.offsetY - 1;
+                    var x = array[1] + self.offsetX;
+                    var y = array[2] + self.offsetY;
 
                     var point = erlife.viewport.translateToClient(x, y);
                     x = point[0];
@@ -238,11 +236,9 @@
                 });
 
                 for(i = 0; i++; i < delta.length){
-                    console.log("i " + i);
                     // [false | true, X, Y]
-                    var x = delta[i][1] + this.canvas.offsetX - 1;
-                    var y = delta[i][2] + this.canvas.offsetY - 1;
-                    console.log("x " + x + " y " + y);
+                    var x = delta[i][1] + this.canvas.offsetX;
+                    var y = delta[i][2] + this.canvas.offsetY;
                     this.drawCell(x, y, delta[i][0]);
                 }
             },
@@ -292,7 +288,6 @@
                 x = Math.ceil(((posx - domObject.pageLeft)/cellSize) - 1);
                 y = Math.ceil(((posy - domObject.pageTop)/cellSize) - 1);
 
-                console.log("x=" + x + " y=" + y);
                 return {x: x, y: y};
             },
 
