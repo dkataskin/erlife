@@ -34,13 +34,14 @@
                     else {
                         var event = $.parseJSON(e.data);
                         if (event){
+                            var data = event.data;
                             if (event.event == "nextGen"){
-                                var data = event.data;
                                 erlife.eventHandlers.onNextGen(data.num, data.nodeCount, data.delta);
                             } else if (event.event == "savedstates"){
-                                var data = event.data;
                                 erlife.onSavedStatesListLoaded(data);
                                 console.log("saved states loaded " + e.data);
+                            } else if (event.event == "viewport"){
+                                erlife.eventHandlers.onViewport(data);
                             }
                         }
                     }
@@ -57,6 +58,12 @@
                                                     statechanges: changes,
                                                     invalidate: invalidate
                                                   }
+                                          }));
+            },
+
+            getViewPort: function(viewport){
+                this.bullet.send($.toJSON({ command: "viewport",
+                                            data: [viewport.minX, viewport.minY, viewport.maxX, viewport.maxY]
                                           }));
             },
 
@@ -84,11 +91,19 @@
             onNextGen: function(genNum, nodeCount, delta){
                 erlife.canvas.applyDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
+                erlife.viewport.invalidate = false;
 
                 setTimeout(function() {
                     if (erlife.isRunning){
                         erlife.update([]);
                     }}, 100);
+            },
+
+            onViewport: function(viewportData){
+                console.log("refresh viewport");
+                erlife.viewport.invalidate = false;
+                erlife.canvas.clear();
+                erlife.canvas.applyDelta(viewportData);
             }
         },
 
@@ -163,7 +178,7 @@
                 this.canvas.onmouseup = this.onmouseup;
                 this.canvas.onmousemove = this.onmousemove;
                 this.canvas.onselectstart = function () { return false; };
-                
+
                 this.state = new Array();
                 for(var i = 0; i < this.cols; i++){
                     var row = new Array();
@@ -178,8 +193,14 @@
             },
 
             clear: function(){
-                erlife.canvas.draw();
-                erlife.canvas.userState.clear();
+                this.draw();
+                this.userState.clear();
+
+                for(var i = 0; i < this.cols; i++){
+                    for(var j = 0; j < this.rows; j++){
+                        this.state[i][j] = false;
+                    }
+                };
             },
 
             draw: function(){
@@ -205,8 +226,8 @@
             applyDelta: function(delta){
                 var self = this;
                 delta.forEach(function(array) {
-                    var x = array[1] + self.offsetX - 1;
-                    var y = array[2] + self.offsetY - 1;
+                    var x = array[1] + self.offsetX - 1 - erlife.viewport.offsetX;
+                    var y = array[2] + self.offsetY - 1 - erlife.viewport.offsetY;
                     self.drawCell(x, y, array[0]);
                     self.state[x][y] = array[0];
                 });
@@ -301,9 +322,22 @@
             viewPortHeight: 100,
             invalidate: false,
 
-            setOffset: function(offsetX, offsetY){
-                this.offsetX = offsetX;
-                this.offsetY = offsetY;
+            scrollX: function(delta){
+                this.offsetX += delta;
+                this.invalidate = true;
+
+                if (!erlife.isRunning){
+                    erlife.server.getViewPort(this.getView());
+                }
+            },
+
+            scrollY: function(delta){
+                this.offsetY += delta;
+                this.invalidate = true;
+
+                if (!erlife.isRunning){
+                    erlife.server.getViewPort(this.getView());
+                }
             },
 
             getView: function(){
@@ -365,6 +399,14 @@
                 var viewport = this.viewport.getView();
                 this.server.loadState(id, viewport);
             }
+        },
+
+        scrollX: function(delta){
+            this.viewport.scrollX(delta);
+        },
+
+        scrollY: function(delta){
+            this.viewport.scrollY(delta);
         },
 
         init: function(config){

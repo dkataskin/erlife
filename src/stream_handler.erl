@@ -58,6 +58,16 @@ execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ s
         Resp = execute_on_server(SessionId, Fun),
         reply(Resp, Req, State);
 
+execute_command(<<"viewport">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
+        io:format("user commanded: viewport, data:~p~n", [Data]),
+        Viewport = erlife_protocol:parse_viewport(Data),
+        Fun = fun(Pid) ->
+          {ok, ViewportData} = erlife_engine:get_viewport(Pid, Viewport),
+          erlife_protocol:viewport_to_json(ViewportData)
+        end,
+        Resp = execute_on_server(SessionId, Fun),
+        reply(Resp, Req, State);
+
 execute_command(<<"clear">>, _, Req, State=#stream_state{ sessionId = SessionId }) ->
         io:format("user commanded: clear~n"),
         Fun = fun(Pid) ->

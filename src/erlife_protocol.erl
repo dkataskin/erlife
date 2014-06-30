@@ -8,13 +8,13 @@
 -define(id_prop, <<"id">>).
 
 %% API
--export([parse_nextgen_input/1, parse_save_input/1, parse_load_input/1]).
--export([dump_list_to_json/1, gen_delta_to_json/2]).
+-export([parse_nextgen_input/1, parse_save_input/1, parse_load_input/1, parse_viewport/1]).
+-export([dump_list_to_json/1, gen_delta_to_json/2, viewport_to_json/1]).
 
-parse_nextgen_input([{?viewport_prop, [MinX, MinY, MaxX, MaxY]},
+parse_nextgen_input([{?viewport_prop, ViewportJson},
                      {?state_changes_prop, StateChanges},
                      {?invalidate_prop, Invalidate}]) ->
-        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
+        Viewport = parse_viewport(ViewportJson),
         StateChanges1 = parse_state_changes(StateChanges),
         case Invalidate of
           true ->
@@ -36,9 +36,11 @@ parse_save_input([{?id_prop, Id},
             {Id, Name, parse_state_changes(StateChanges)}
         end.
 
-parse_load_input([{?id_prop, Id}, {?viewport_prop, [MinX, MinY, MaxX, MaxY]}]) ->
-        Viewport = {{MinX, MinY}, {MaxX, MaxY}},
-        {Id, Viewport}.
+parse_load_input([{?id_prop, Id}, {?viewport_prop, ViewportJson}]) ->
+        {Id, parse_viewport(ViewportJson)}.
+
+parse_viewport([MinX, MinY, MaxX, MaxY]) ->
+        {{MinX, MinY}, {MaxX, MaxY}}.
 
 array_to_state_changes([], Acc) ->
         Acc;
@@ -65,6 +67,10 @@ gen_delta_to_json(GenNum, Delta) ->
                     {<<"data">>, [{<<"num">>, GenNum},
                                   {<<"nodeCount">>, 0},
                                   {<<"delta">>, prepare_delta(Delta)}]}]).
+
+viewport_to_json(ViewportData) ->
+        jsx:encode([{<<"event">>, <<"viewport">>},
+                    {<<"data">>, prepare_delta(ViewportData)}]).
 
 prepare_delta(Delta) ->
         Fun = fun({X, Y, Action}) ->

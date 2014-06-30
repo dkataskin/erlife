@@ -134,6 +134,22 @@
                 $("#textLoadedStateName").val(name);
             });
 
+            $("#buttonLeft").click(function(){
+                erlife.scrollX(-5);
+            });
+
+            $("#buttonUp").click(function(){
+                erlife.scrollY(-5);
+            });
+
+            $("#buttonRight").click(function(){
+                erlife.scrollX(5);
+            });
+
+            $("#buttonDown").click(function(){
+                erlife.scrollY(5);
+            });
+
             erlife.init({ address: 'ws://localhost:8085/erlife',
                           canvas: canvas,
                           context: context,
