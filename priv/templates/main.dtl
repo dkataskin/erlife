@@ -72,6 +72,11 @@
                 $("#livecells").text(nodeCount);
             };
 
+            $("#selectSavedStates").on("change", function() {
+                var name = $("#selectSavedStates option:selected").text();
+                $("#textLoadedStateName").val(name);
+            });
+
             erlife.onSavedStatesListLoaded = function(list){
                 var select = $("#selectSavedStates");
                 var selectedId = select.val();
@@ -84,6 +89,11 @@
 
                 if (selectedId){
                     select.val(selectedId);
+                }
+                else {
+                    if (list.length > 0){
+                        $("#textLoadedStateName").val(list[0].name);
+                    }
                 }
             };
 
@@ -135,10 +145,6 @@
                 erlife.loadState(id);
             });
 
-            $("#selectSavedStates").on("change", function() {
-                var name = $("#selectSavedStates option:selected").text();
-                $("#textLoadedStateName").val(name);
-            });
 
             $("#buttonLeft").click(function(){ erlife.scrollX(-5); });
             $("#buttonUp").click(function(){ erlife.scrollY(-5); });

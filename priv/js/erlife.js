@@ -95,7 +95,7 @@
                 setTimeout(function() {
                     if (erlife.isRunning){
                         erlife.update([]);
-                    }}, 100);
+                    }}, 50);
             },
 
             onViewport: function(viewportData){
@@ -297,11 +297,13 @@
             },
 
             onmousedown: function(e){
-                erlife.canvas.mousedown = true;
-                var pos = erlife.canvas.mousePosition(e);
-                erlife.canvas.userState.set(pos.x, pos.y);
-                erlife.canvas.lastX = pos.x;
-                erlife.canvas.lastY = pos.y;
+                if (!erlife.isRunning){
+                    erlife.canvas.mousedown = true;
+                    var pos = erlife.canvas.mousePosition(e);
+                    erlife.canvas.userState.set(pos.x, pos.y);
+                    erlife.canvas.lastX = pos.x;
+                    erlife.canvas.lastY = pos.y;
+                }
             },
 
             onmousemove: function(e){
