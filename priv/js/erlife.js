@@ -1,6 +1,7 @@
 (function(){
     var erlife = window.erlife = {
         isRunning: false,
+        isLocal: false,
 
         onUpdate: function(genNum, nodeCount){
         },
@@ -96,10 +97,17 @@
                 erlife.canvas.applyDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
 
-                setTimeout(function() {
-                    if (erlife.isRunning){
+                if (erlife.isRunning){
+                    if (erlife.isLocal){
+                        setTimeout(function() {
+                            if (erlife.isRunning){
+                                erlife.update([]);
+                            }}, 50);
+                    }
+                    else{
                         erlife.update([]);
-                    }}, 50);
+                    }
+                }
             },
 
             onViewport: function(viewportData){
@@ -428,6 +436,7 @@
         },
 
         init: function(config){
+            this.isLocal = config.isLocalConnection;
             this.canvas.init(config.canvas, config.context);
             this.server.init(config.address, config.sessionId);
         }

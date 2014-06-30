@@ -159,7 +159,11 @@
             $("#buttonRight").click(function(){ erlife.scrollX(5); });
             $("#buttonDown").click(function(){ erlife.scrollY(5); });
 
-            erlife.init({ address: 'ws://localhost:8085/erlife',
+            var host = window.location.host;
+            var localConnection = (host.indexOf("127.0.0.1") >= 0) || (host.indexOf("localhost") >= 0);
+
+            erlife.init({ address: "ws://" + host + "/erlife",
+                          isLocalConnection: localConnection,
                           canvas: canvas,
                           context: context,
                           sessionId: sessionId
