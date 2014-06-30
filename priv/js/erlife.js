@@ -88,9 +88,13 @@
 
         eventHandlers: {
             onNextGen: function(genNum, nodeCount, delta){
+                if (erlife.viewport.invalidate){
+                    erlife.canvas.clear();
+                    erlife.viewport.invalidate = false;
+                }
+
                 erlife.canvas.applyDelta(delta);
                 erlife.onUpdate(genNum, nodeCount);
-                erlife.viewport.invalidate = false;
 
                 setTimeout(function() {
                     if (erlife.isRunning){
@@ -223,6 +227,7 @@
             },
 
             applyDelta: function(delta){
+
                 var self = this;
                 delta.forEach(function(array) {
                     var x = array[1] + self.offsetX;

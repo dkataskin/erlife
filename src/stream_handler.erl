@@ -31,7 +31,6 @@ stream(Data, Req, State) ->
         end.
 
 info(list_saved_states, Req, State) ->
-        io:format("list saved states command received~n"),
         {ok, DumpList} = erlife_store:list(),
         Reply = erlife_protocol:dump_list_to_json(DumpList),
         {reply, Reply, Req, State};
@@ -49,7 +48,6 @@ execute_command([{<<"command">>, Command} | T], Req, State) ->
         execute_command(Command, T, Req, State).
 
 execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-        %io:format("user commanded: nextGen, data:~p~n", [Data]),
         {ok, Viewport, StateChanges, Options} = erlife_protocol:parse_nextgen_input(Data),
         Fun = fun(Pid) ->
                 {ok, {GenNum, Delta}} = erlife_engine:next_gen(Pid, Viewport, StateChanges, Options),
@@ -59,7 +57,6 @@ execute_command(<<"nextGen">>, [{<<"data">>, Data}], Req, State=#stream_state{ s
         reply(Resp, Req, State);
 
 execute_command(<<"viewport">>, [{<<"data">>, Data}], Req, State=#stream_state{ sessionId = SessionId }) ->
-        io:format("user commanded: viewport, data:~p~n", [Data]),
         Viewport = erlife_protocol:parse_viewport(Data),
         Fun = fun(Pid) ->
           {ok, ViewportData} = erlife_engine:get_viewport(Pid, Viewport),
