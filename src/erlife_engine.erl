@@ -274,6 +274,3 @@ translate(to_server, {X, Y}) ->
 
 translate(to_client, {X, Y}) ->
         {X - ?center, Y - ?center}.
-
-to_point(<<X:64, Y:64>>) ->
-        {X - ?center, Y - ?center}.
