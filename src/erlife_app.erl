@@ -1,4 +1,5 @@
 -module(erlife_app).
+-author("Dmitry Kataskin").
 
 -behaviour(application).
 

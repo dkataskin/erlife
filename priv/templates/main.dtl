@@ -73,12 +73,18 @@
             };
 
             erlife.onSavedStatesListLoaded = function(list){
-                $("#selectSavedStates").empty();
-                var options = $("#selectSavedStates");
+                var select = $("#selectSavedStates");
+                var selectedId = select.val();
+
+                select.empty();
 
                 list.forEach(function(state) {
-                    options.append($("<option />").val(state.id).text(state.name));
+                    select.append($("<option />").val(state.id).text(state.name));
                 });
+
+                if (selectedId){
+                    select.val(selectedId);
+                }
             };
 
             $("#buttonRun").click(function(){
@@ -134,21 +140,10 @@
                 $("#textLoadedStateName").val(name);
             });
 
-            $("#buttonLeft").click(function(){
-                erlife.scrollX(-5);
-            });
-
-            $("#buttonUp").click(function(){
-                erlife.scrollY(-5);
-            });
-
-            $("#buttonRight").click(function(){
-                erlife.scrollX(5);
-            });
-
-            $("#buttonDown").click(function(){
-                erlife.scrollY(5);
-            });
+            $("#buttonLeft").click(function(){ erlife.scrollX(-5); });
+            $("#buttonUp").click(function(){ erlife.scrollY(-5); });
+            $("#buttonRight").click(function(){ erlife.scrollX(5); });
+            $("#buttonDown").click(function(){ erlife.scrollY(5); });
 
             erlife.init({ address: 'ws://localhost:8085/erlife',
                           canvas: canvas,

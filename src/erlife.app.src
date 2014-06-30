@@ -1,7 +1,7 @@
 {application, erlife,
  [
   {description, ""},
-  {vsn, "1"},
+  {vsn, "0.1"},
   {registered, []},
   {applications, [kernel, stdlib, crypto, inets, ranch, cowlib, gproc]},
   {mod, { erlife_app, []}},
