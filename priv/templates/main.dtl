@@ -6,8 +6,11 @@
     <script src="js/bullet.js"></script>
     <script src="js/erlife.js"></script>
     <script src="js/jquery.json.js"></script>
+    <script src="js/maxmerkit.js"></script>
+    <script src="js/paper-full.js"></script>
 
     <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <link rel="stylesheet" type="text/css" href="css/maxmerkit.css" />
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
 
     <title>Conway's Game of Life</title>
