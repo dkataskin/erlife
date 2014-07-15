@@ -11,9 +11,9 @@
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
 
--export([next_gen/3, next_gen/4]).
--export([dump_state/1, restore_from_dump/2]).
+-export([next_gen/1]).
 -export([apply_changes/2, clear/1, get_viewport/2, live_count/1]).
+-export([dump_state/1, restore_from_dump/2]).
 
 -record(state, { gen = 0,
                  liveCount = 0,
