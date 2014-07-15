@@ -36,35 +36,24 @@ start_link(Id) ->
 stop(Pid) ->
         gen_server:call(Pid, stop).
 
--spec next_gen(Pid::pid(), Viewport::viewport(), ChangesToState::[cellchange()]) ->
-            {ok, gendata()}.
-next_gen(Pid, Viewport, ChangesToState) ->
-        gen_server:call(Pid, {next_gen, Viewport, ChangesToState, []}).
+next_gen(Pid) ->
+        gen_server:call(Pid, {next_gen}).
 
-next_gen(Pid, Viewport, ChangesToState, Options) ->
-        gen_server:call(Pid, {next_gen, Viewport, ChangesToState, Options}).
-
--spec apply_changes(Pid::pid(), ChangesToState::[cellchange()]) -> {ok, applied}.
 apply_changes(Pid, ChangesToState) ->
         gen_server:call(Pid, {apply_changes, ChangesToState}).
 
--spec clear(Pid::pid()) -> {ok, cleared}.
 clear(Pid) ->
         gen_server:call(Pid, clear).
 
--spec get_viewport(Pid::pid(), Viewport::viewport()) -> {ok, viewportdata()}.
 get_viewport(Pid, Viewport) ->
         gen_server:call(Pid, {get_viewport, Viewport}).
 
--spec live_count(Pid::pid()) -> {ok, non_neg_integer()}.
 live_count(Pid) ->
         gen_server:call(Pid, live_count).
 
--spec dump_state(Pid::pid()) -> {dumped, ets:tid()}.
 dump_state(Pid) ->
         gen_server:call(Pid, dump_state).
 
--spec restore_from_dump(Pid::pid(), DumpTabId::ets:tid()) -> {ok, restored}.
 restore_from_dump(Pid, DumpTabId) ->
         gen_server:call(Pid, {restore_from_dump, DumpTabId}).
 
