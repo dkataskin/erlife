@@ -15,19 +15,22 @@
 -export([apply_changes/2, clear/1, get_viewport/2, live_count/1]).
 -export([dump_state/1, restore_from_dump/2]).
 
--record(state, { gen = 0,
-                 liveCount = 0,
-                 genTime = 0,
-                 tab_id = undefined }).
-
 -type cellkey() :: binary().
 -type point() :: {integer(), integer()}.
--type viewport() :: {point(), point()}.
+-type rect() :: {point(), point()}.
 -type cellaction() :: die | arise.
 -type celldelta() :: {cellkey(), cellaction()}.
 -type cellchange() :: {integer(), integer(), cellaction()}.
 -type viewportdata() :: [celldelta()].
 -type gendata() :: {non_neg_integer(), viewportdata()}.
+
+-record(qtree, { rect = undefined :: rect(), is_leaf = false :: boolean(), nodes = [] :: [qtree()] }).
+-type qtree() :: #qtree{}.
+
+-record(state, { gen = 0,
+                 liveCount = 0,
+                 genTime = 0,
+                 univ = #qtree{} }).
 
 % api
 start_link(Id) ->
@@ -60,7 +63,6 @@ restore_from_dump(Pid, DumpTabId) ->
 % gen_server callbacks
 -spec init(Id::binary()) -> {ok, pid()}.
 init([Id]) ->
-        TabId = ets:new(node_table, [set, {keypos, 1}]),
         gproc:add_local_name(Id),
         {ok, #state{ gen = 0, tab_id = TabId }}.
 
