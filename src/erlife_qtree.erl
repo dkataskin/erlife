@@ -13,4 +13,9 @@
 -export([new/1]).
 
 -spec new(Rect::rect()) -> {ok, qtree()}.
-new(Rect) -> ok.
+new(Rect) ->
+        {ok, #qtree { rect = Rect }}.
+
+-spec add_point(QTree::qtree(), Point::point()) -> {ok, qtree()}.
+add_point(QTree = #qtree{}, Point) ->
+        {ok, QTree}.
