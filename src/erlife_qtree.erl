@@ -10,7 +10,7 @@
 -export_type([point/0, rect/0, qtree/0]).
 
 %% API
--export([new/1]).
+-export([new/1, add_point/2]).
 
 -spec new(Rect::rect()) -> {ok, qtree()}.
 new(Rect) ->

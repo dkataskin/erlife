@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+    <script src="js/bullet.js"></script>
+    <script src="js/erlife.js"></script>
+    <script src="js/jquery.json.js"></script>
+    <script src="js/maxmerkit.js"></script>
+    <script src="js/paper-full.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <link rel="stylesheet" type="text/css" href="css/maxmerkit.css" />
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
+
+    <title>Conway's Game of Life</title>
+</head>
+    <body>
+
+    </body>
+</html>
