@@ -1,7 +1,7 @@
 erlife
 ======
 
-Erlife is an implementation of Conway's Game of Life. Implemented as a client-server app. Server is http server on WebSockets written in Erlang (cowboy, bullet) and client is HTML5\javascript (canvas). Although some optimizations were applied this is NOT a HashLife implementation. 
+Erlife is an implementation of Conway's Game of Life.
 
 Runs on R16B03-1, works in Chrome. Wasn't tested with other runtimes and browsers.
 
