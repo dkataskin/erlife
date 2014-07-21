@@ -13,9 +13,9 @@
     <link rel="stylesheet" type="text/css" href="css/maxmerkit.css" />
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
 
-    <title>Conway's Game of Life</title>
+    <title>{% block title %}{% endblock %}</title>
 </head>
     <body>
-
+        {% block content %}{% endblock %}
     </body>
 </html>
