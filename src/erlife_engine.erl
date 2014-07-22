@@ -64,51 +64,28 @@ restore_from_dump(Pid, DumpTabId) ->
 -spec init(Id::binary()) -> {ok, pid()}.
 init([Id]) ->
         gproc:add_local_name(Id),
-        {ok, #state{ gen = 0, tab_id = TabId }}.
+        {ok, #state{ gen = 0 }}.
 
-handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen, tab_id = TabId }) ->
-        Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        Actions = changes_to_action_list(ChangesToState),
-        {ok, _} = apply_changes_to_state(Actions, TabId),
-        {ok, {Delta, Count}} = calc_next_gen(Viewport1, TabId),
-        Resp = case proplists:lookup(invalidate, Options) of
-                 {invalidate, true} ->
-                   invalidate_viewport(Viewport1, TabId);
-                 none ->
-                   Delta
-               end,
+handle_call({next_gen, {Min, Max}, ChangesToState, Options}, _From, State=#state{ gen = Gen }) ->
+        {reply, ok, State};
 
-        NewState = State#state { gen = Gen + 1, liveCount = Count },
-        {reply, {ok, {NewState#state.gen, NewState#state.liveCount, Resp}}, NewState};
+handle_call({apply_changes, ChangesToState}, _From, State=#state { liveCount = Count }) ->
+        {reply, {ok, applied}, State};
 
-handle_call({apply_changes, ChangesToState}, _From, State=#state { tab_id = TabId, liveCount = Count }) ->
-        Actions = changes_to_action_list(ChangesToState),
-        {ok, {_, CountChange}} = apply_changes_to_state(Actions, TabId),
-        NewState = State#state { liveCount = Count + CountChange },
-        {reply, {ok, applied}, NewState};
+handle_call({get_viewport, {Min, Max}}, _From, State=#state {  }) ->
+        {reply, ok, State};
 
-handle_call({get_viewport, {Min, Max}}, _From, State=#state { tab_id = TabId }) ->
-        Viewport1 = {translate(to_server, Min), translate(to_server, Max)},
-        ViewportData = invalidate_viewport(Viewport1, TabId),
-        {reply, {ok, ViewportData}, State};
-
-handle_call(dump_state, _From, State=#state { tab_id = TabId }) ->
-        {reply, {dumped, TabId}, State};
+handle_call(dump_state, _From, State=#state {  }) ->
+        {reply, ok, State};
 
 handle_call(live_count, _From, State=#state { liveCount = Count }) ->
         {reply, {ok, Count}, State};
 
-handle_call({restore_from_dump, DumpTabId}, _From, #state { tab_id = TabId }) ->
-        true = ets:delete(TabId),
-        LiveCount = ets:foldl(fun(_, Count) -> Count + 1 end, 0, DumpTabId),
-        NewState = #state { gen = 0, tab_id = DumpTabId, liveCount = LiveCount },
+handle_call({restore_from_dump, DumpTabId}, _From, State) ->
+        {reply, ok, State};
 
-        {reply, {ok, restored}, NewState};
-
-handle_call(clear, _From, State=#state { tab_id = TabId }) ->
-        true = ets:delete_all_objects(TabId),
-        NewState = State#state { gen = 0, liveCount = 0 },
-        {reply, {ok, cleared}, NewState};
+handle_call(clear, _From, State) ->
+        {reply, {ok, cleared}, State};
 
 handle_call(stop, _From, State) ->
         {stop, normal, ok, State};

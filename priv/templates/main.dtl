@@ -1,5 +1,9 @@
-{% extends "master.dtl" %}
+{% extends "layout.dtl" %}
+
 {% block title %}Conway's Game of Life{% endblock %}
+
+{% block header %}Conway's Game of Life{% endblock %}
+
 {% block content%}
     <div>
 
