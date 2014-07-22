@@ -16,7 +16,7 @@
     <title>{% block title %}{% endblock %}</title>
 </head>
     <body>
-        <h4 class="ui black block header">
+        <h4 class="ui center aligned black block header">
             {% block header %}{% endblock %}
         </h4>
         {% block content %}{% endblock %}
