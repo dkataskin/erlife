@@ -6,11 +6,11 @@
     <script src="js/bullet.js"></script>
     <script src="js/erlife.js"></script>
     <script src="js/jquery.json.js"></script>
-    <script src="js/maxmerkit.js"></script>
+    <script src="js/semantic.min.js"></script>
     <script src="js/paper-full.js"></script>
 
     <link rel="stylesheet" type="text/css" href="css/style.css" />
-    <link rel="stylesheet" type="text/css" href="css/maxmerkit.css" />
+    <link rel="stylesheet" type="text/css" href="css/semantic.min.css" />
     <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
 
     <title>{% block title %}{% endblock %}</title>

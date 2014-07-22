@@ -2,6 +2,6 @@
 {% block title %}Conway's Game of Life{% endblock %}
 {% block content%}
     <div>
-        
+
     </div>
 {% endblock %}
