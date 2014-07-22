@@ -6,6 +6,21 @@
 
 {% block content%}
     <div>
-
+        <canvas id="world_cnvs"></canvas>
+        <div class="ui left aligned horizontal list">
+            Info
+            <div class="item">
+                <div class="ui label">
+                    Generation:
+                    <a class="detail">23</a>
+                </div>
+            </div>
+            <div class="item">
+                <div class="ui label">
+                    Generation:
+                    <a class="detail">23</a>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
